@@ -1,28 +1,23 @@
 <!doctype html>
-<html>
+<html ng-controller="ApplicationController">
 	<head>
 		<meta charset="utf-8" />
-		<title>Talescape</title>
+		<title ng-bind="title"></title>
 		
 		<script data-main="js/main.js" src="js/lib/requirejs/require.js"></script>
 		
 		<style>
-			.map-canvas { height: 400px; }
+			.map-container, .map-canvas, html, body {
+				height: 100%;
+				min-height: 100%;
+				padding: 0px;
+				margin: 0px;
+			}
 		</style>
 	</head>
 	<body>
-		<h1>Talescape</h1>
-		
-		<section id="map" ng-controller="MapController" >
-			<div ui-map="map" ui-options="mapOptions" class="map-canvas"></div>
+		<section height="100%" id="map" ng-controller="MapController" class="map-container" >
+			<div height="100%" ui-map="map" ui-options="mapOptions" class="map-canvas"></div>
 		</section>
-		
-		<div ng-controller="AudioSpotController">
-			<button ng-click='play()'>{{buttonText}}</button>
-			<ul>
-				<li> Coordinates: {{gpsCoordinates}}
-				<li> Playing: {{audioFile}}
-			</ul>
-		</div>
 	</body>
 </html>
