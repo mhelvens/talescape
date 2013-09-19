@@ -1,8 +1,8 @@
 define('talescape', ['jquery', 'angular', 'ng-ui/map'],
 		   function ( $      ,  angular ) {
 	
-	angular.module('TS.service', [])
-		.factory('audio', function() {
+	angular.module('TS.service', []);
+		/*.factory('audio', function() {
 			var audioElement = $("<audio id='audio'>")[0];
 			$('html').append( audioElement );
 			
@@ -13,7 +13,7 @@ define('talescape', ['jquery', 'angular', 'ng-ui/map'],
 				isPlaying: function()    { return !audioElement.paused; },
 				isPaused:  function()    { return  audioElement.paused; }
 			};
-		});
+		});*/
 	
 	angular.module('TS.directive', []);
 	
@@ -26,18 +26,19 @@ define('talescape', ['jquery', 'angular', 'ng-ui/map'],
 		$scope.title = 'Talescape';
 	}]);
 	
-	TS.controller('MapAreaController', ['audio', '$scope',
-	                          function ( audio ,  $scope ) {
+	TS.controller('MapAreaController', ['$scope',
+	                          function ( $scope ) {
 		
-		$scope.latlng    = new google.maps.LatLng(35.784, -78.670);
-		$scope.radius    = 200;
-		$scope.audioFile = 'audio/tail toddle.mp3';
-
-		audio.load($scope.audioFile);
+		$scope.audioElement = $("<audio class='areaAudio'>");
+		function loadAudioFile(url) { $scope.audioElement[0].src = url; }
+		function playAudio()        { $scope.audioElement[0].play(); }
+		function pauseAudio()       { $scope.audioElement[0].pause(); }
+		
+		loadAudioFile($scope.audioURL);
 		
 		$scope.circle = new google.maps.Circle({
 			center: $scope.latlng,
-			radius: 200,
+			radius: $scope.radius,
 			clickable: true,
 			draggable: false,
 			editable: false,
@@ -54,7 +55,7 @@ define('talescape', ['jquery', 'angular', 'ng-ui/map'],
 		
 		var funkyCircleOptions = {
 			center: $scope.latlng,
-			radius: $scope.circleWidth,
+			radius: $scope.radius,
 			clickable: true,
 			draggable: false,
 			editable: false,
@@ -76,10 +77,8 @@ define('talescape', ['jquery', 'angular', 'ng-ui/map'],
 		var secondWaveDelay = 10;
 		function animationState(delay) { return ($scope.aniState + delay) % aniSteps; }
 		function incrementAnimationState() { $scope.aniState = animationState(1); }
-		function zoomScale() { return Math.pow(2, 15 - $scope.zoom) }
-		
-		
-		$scope.expandCircle = function() {
+		function zoomScale() { return Math.pow(2, 15 - $scope.map.getZoom()) }
+		function expandCircle() {
 			incrementAnimationState();
 			var state = animationState(0);
 			$scope.funkyCircle1.setOptions({
@@ -93,45 +92,77 @@ define('talescape', ['jquery', 'angular', 'ng-ui/map'],
 				strokeWeight: (3 - state * 3 / aniEndState),
 				visible:      (state < 30)
 			});
-		};
+		}
+		
+		function startPlayback() {
+			playAudio();
+			$scope.circle.setOptions({ fillColor: 'red', strokeColor: 'red' });
+			$scope.timer = setInterval(expandCircle, 20);
+			$scope.aniState = startAniState;
+		}
+		
+		function pausePlayback() {
+			pauseAudio();
+			$scope.circle.setOptions({ fillColor: 'green', strokeColor: 'green' });
+			clearInterval($scope.timer);
+			$scope.funkyCircle1.setOptions({ visible: false });
+			$scope.funkyCircle2.setOptions({ visible: false });
+		}
+		
+		//google.maps.event.addListener($scope.map, 'zoom_changed', function() {
+		//});
 		
 		google.maps.event.addListener($scope.circle, 'click', function() {
-			if (audio.isPlaying()) {
-				audio.pause();
-				$scope.circle.setOptions({ fillColor: 'green', strokeColor: 'green' });
-				clearInterval($scope.timer);
-				$scope.funkyCircle1.setOptions({visible: false});
-				$scope.funkyCircle2.setOptions({visible: false});
-			} else {
-				audio.play();
-				$scope.circle.setOptions({ fillColor: 'red', strokeColor: 'red' });
-				$scope.timer = setInterval($scope.expandCircle, 20);
-				$scope.aniState = startAniState;
-			}
+			if ($scope.audioElement[0].paused)
+			     { $scope.$emit('click.paused.maparea'); }
+			else { $scope.$emit('click.playing.maparea');  }
 		});
-		
+
+		$scope.$on('click.playing.maparea', pausePlayback);
+		$scope.$on('click.paused.maparea',  startPlayback);
+		$scope.audioElement.on('ended', pausePlayback);
 	}]);
 	
 	TS.controller('MapController', ['$scope', '$controller',
 	                      function ( $scope ,  $controller) {
-
-		$scope.latlng = new google.maps.LatLng(35.784, -78.670);
-		$scope.zoom   = 15;
 		
 		$scope.mapOptions = {
-			center: $scope.latlng,
-			zoom:   $scope.zoom,
+			center: new google.maps.LatLng(35.784, -78.670),
+			zoom:   15,
 			mapTypeId: google.maps.MapTypeId.TERRAIN,
 			disableDefaultUI: true
 		};
 		
-		// TODO: Don't use a delay, find the correct callback.
+		$scope.mapAreas = new Array();
+		
+		function spawnMapArea(options) {
+			var newScope = $scope.$new();
+			$.extend(newScope, options);
+			$scope.mapAreas.push($controller(
+				'MapAreaController', {$scope: newScope}
+			));
+		}
+		
+		// TODO: Don't use a delay, but find the correct callback.
 		setTimeout(function(){
-			google.maps.event.addListener($scope.map, 'zoom_changed', function() {
-				$scope.zoom = $scope.map.getZoom();
+			spawnMapArea({
+				latlng  : new google.maps.LatLng(35.784, -78.670),
+				radius  : 200,
+				audioURL: 'audio/cairnomount.mp3'
 			});
-			$controller('MapAreaController', {$scope: $scope.$new()});
-		}, 1000);
+			
+			spawnMapArea({
+				latlng  : new google.maps.LatLng(35.784, -78.640),
+				radius  : 300,
+				audioURL: 'audio/tail toddle.mp3'
+			});
+			
+			spawnMapArea({
+				latlng  : new google.maps.LatLng(35.774, -78.655),
+				radius  : 300,
+				audioURL: 'audio/saewill.mp3'
+			});
+		}, 1);
 		
 		
 	}]);
