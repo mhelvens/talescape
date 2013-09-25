@@ -1,4 +1,4 @@
-//// RequireJS Configuration
+ //// RequireJS Configuration
 //
 require.config({
 	paths: {
@@ -19,28 +19,36 @@ require.config({
 	}
 });
 
-//// Load Polyfills
+ //// Load Polyfills
 //
-requirejs(['jquery', 'polyfiller', 'geoloc'], // TODO: not a good dependency structure
+requirejs(['jquery', 'polyfiller'],
  function ( $      ){
 	
 	console.info('Loading polyfills...');
+	
 	$.webshims.setOptions({
-		'waitReady': false,
-		basePath: "/js/lib/webshim/src/shims/"
+		waitReady: false,
+		basePath : "/js/lib/webshim/src/shims/"
+	});
+	
+	$.webshims.setOptions('geolocation', {
+		confirmText: 'Talescape needs to know your GPS location. Is that OK?'
 	});
 	$.webshims.polyfill('geolocation');
+	
 	console.log('Polyfills loaded.');
 	
 });
 
-//// Bootstrap Angular
+ //// Bootstrap Angular
 //
-requirejs(['angular', 'domReady!', 'talescape'],
+requirejs(['angular', 'domReady!', 'TS'],
  function ( angular ){
 	
 	console.info('Boostrapping Angular...');
+	
 	angular.bootstrap(document, ['TS']);
+	
 	console.log('Angular bootstrapped.');
 	
 });

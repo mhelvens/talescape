@@ -1,0 +1,12 @@
+.ts-map,
+.ts-map .canvas {
+	height: 100%;
+	min-height: 100%;
+	padding: 0px;
+	margin: 0px;
+	border: 0px;
+}
+
+.ts-map[hidden] {
+	display: none;
+}
