@@ -61,8 +61,6 @@ var TS = angular.module("TS", [])
 		
 		_placeLocationMarker(position);
 		
-		_map.setCenter(position.latLng);
-		
 		for (i in _onNewUserPositionCallbacks) {
 			_onNewUserPositionCallbacks[i](position);
 		}
@@ -78,13 +76,13 @@ var TS = angular.module("TS", [])
 				editable:  false,
 				clickable: false,
 				position:  position.latLng,
-	            icon: {
+	            /*icon: {
 	            	url:       'img/marker.png',
 	    			size:       new google.maps.Size (96, 96),
 	    			origin:     new google.maps.Point(0 , 0 ),
 	    			anchor:     new google.maps.Point(16, 16),
 	    			scaledSize: new google.maps.Size (32, 32)
-	            }
+	            }*/
 	        });
 		}
 		
@@ -131,11 +129,21 @@ var TS = angular.module("TS", [])
 	 //// Listen to user location
 	//
 	$.webshims.ready('geolocation', function(){
-		navigator.geolocation.watchPosition(_onNewPosition);
+		navigator.geolocation.getCurrentPosition(function(position) {
+			_map.setCenter(new google.maps.LatLng(
+				position.coords.latitude,
+				position.coords.longitude
+			));
+		});
+		
+		navigator.geolocation.watchPosition(_onNewPosition, function(error) {
+			console.error(error.message);
+		}, {
+			enableHighAccuracy: true
+		});
 	});
 	
 	
-
 	  ////////////////////////////
 	 ////// Public methods //////
 	//////                //////
@@ -177,7 +185,7 @@ var TS = angular.module("TS", [])
  ////// Constants //////
 //////	         //////
 
-var MOVE_IN_MARGIN  = 2; // meters
+var MOVE_IN_MARGIN  = 0; // meters
 var MOVE_OUT_MARGIN = 2; // meters
 
 return {
@@ -275,6 +283,9 @@ return {
 				new google.maps.LatLng(_lat, _lng),
 				position.latLng
 			);
+			
+			_audioElement.volume = Math.max(1, Math.min(0, 1 - (distance / _radius) * (distance / _radius)));
+			console.debug((distance / _radius));
 			
 			if (!_userIsInside && distance < _radius - MOVE_IN_MARGIN) {
 				_userIsInside = true;

@@ -8,13 +8,9 @@ require.config({
 		'async'      : 'lib/requirejs-plugins/src/async',
 		'jquery'     : 'lib/jquery/jquery',
 		'angular'    : 'lib/angular/angular'
-		//'ng-ui/map'  : 'lib/angular-ui-map/src/map',
-		//'ng-ui/event': 'lib/angular-ui-utils/modules/event/event'
 	},
 	shim: {
 		'polyfiller' : ['jquery', 'modernizr'],
-		//'ng-ui/map'  : ['angular', 'ng-ui/event', 'gmaps'],
-		//'ng-ui/event': ['angular'],
 		'angular'    : { exports: 'angular' }
 	}
 });
@@ -52,3 +48,42 @@ requirejs(['angular', 'domReady!', 'TS'],
 	console.log('Angular bootstrapped.');
 	
 });
+
+
+ //// Test
+//
+requirejs(['jquery', 'domReady!'],
+ function ( $      ){
+	console.info('Testing...');
+	
+	
+	$('div.test.A').click(function() {
+		console.debug("First play");
+		$('audio.test')[0].play();
+	});
+
+	$('div.test.B').click(function() {
+	});
+	setTimeout(function() {
+		console.debug("Real play 1");
+		$('audio.test')[0].src = "audio/cairnomount.mp3";
+		$('audio.test')[0].play();
+	}, 6000);
+	setTimeout(function() {
+		console.debug("Real play 2");
+		$('audio.test')[0].src = "audio/saewill.mp3";
+		$('audio.test')[0].play();
+	}, 12000);
+	
+	$('audio.test').one('play', function() {
+		console.debug("First pause");
+		$('audio.test')[0].pause();
+	});
+	
+	
+	
+	console.log('Done testing.');
+
+});
+
+
