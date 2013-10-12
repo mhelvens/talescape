@@ -1,3 +1,5 @@
+'use strict';
+
  //// RequireJS Configuration
 //
 require.config({
@@ -41,7 +43,7 @@ requirejs(['jquery', 'polyfiller'],
 requirejs(['angular', 'domReady!', 'TS'],
  function ( angular ){
 	
-	console.info('Boostrapping Angular...');
+	console.info('Bootstrapping Angular...');
 	
 	angular.bootstrap(document, ['TS']);
 	
