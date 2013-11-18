@@ -4,24 +4,12 @@
 		<meta charset="utf-8" />
 		<title ng-bind="title"></title>
 		<link rel="stylesheet" href="index.css">
-		<link rel="stylesheet" href="partials/tsMap/tsMap.css">
-		
 		<script data-main="js/main.js" src="js/lib/requirejs/require.js"></script>
 	</head>
 	<body>
-		<div>
-			<div class="test A" style="float: left; width: 50%; height: 120px; background-color: green;">
-				A
-			</div>
-			<div class="test B" style="float: right;width: 50%; height: 120px; background-color: red;">
-				B
-			</div>
-			<div style="clear:both;"></div>
-		</div>
-		<audio class="test" src="audio/tail toddle.mp3"></audio>
 		<ts-map options="{zoom: 10}">
-			<ts-area lat="52.3568924" lng="4.9538351" radius="14" audio="audio/tail toddle.mp3"></ts-area>
-			<ts-area lat="52.3567425" lng="4.9540175" radius="14" audio="audio/cairnomount.mp3"></ts-area>
+			<ts-area lat="52.3569524" lng="4.9538351" radius="10" reach="100" audio="audio/tail toddle.mp3"></ts-area>
+			<ts-area lat="52.3566025" lng="4.9540175" radius="10" reach="75" audio="audio/cairnomount.mp3"></ts-area>
 		</ts-map>
 	</body>
 </html>
