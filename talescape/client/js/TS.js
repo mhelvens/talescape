@@ -60,7 +60,8 @@ define(['jquery', 'angular', 'MapCircle', 'gmaps'], function ($, angular, MapCir
 
 					for (var i in _onNewUserPositionCallbacks) {
 						//noinspection JSUnfilteredForInLoop
-						_onNewUserPositionCallbacks[i](position);
+						if (_onNewUserPositionCallbacks[i])
+							_onNewUserPositionCallbacks[i](position);
 					}
 				}
 
@@ -152,7 +153,11 @@ define(['jquery', 'angular', 'MapCircle', 'gmaps'], function ($, angular, MapCir
 				//////                //////
 
 				this.onNewUserPosition = function (handler) {
-					_onNewUserPositionCallbacks.push(handler);
+					// TODO: Use existing pubsub mechanism!
+					var index = _onNewUserPositionCallbacks.push(handler) - 1;
+					return function () {
+						_onNewUserPositionCallbacks[index] = null;
+					};
 				};
 
 				this.map = function () {
@@ -206,8 +211,13 @@ define(['jquery', 'angular', 'MapCircle', 'gmaps'], function ($, angular, MapCir
 
 						var _lat = parseFloat(attrs['lat'   ]);
 						var _lng = parseFloat(attrs['lng'   ]);
+						var _pos = new google.maps.LatLng(_lat, _lng); // convenience
 						var _radius = parseInt(attrs['radius']);
 						var _reach = parseInt(attrs['reach']);
+
+						// TODO: Make sure (_radius < _reach)
+
+						var _newPosUnsubscribe = null;
 
 						var _audioElement = element.children('audio')[0];
 
@@ -221,80 +231,62 @@ define(['jquery', 'angular', 'MapCircle', 'gmaps'], function ($, angular, MapCir
 
 						//// Audio Controls
 						//
-						var _playAudio = function _playAudio() { _audioElement.play(); };
+						function _playAudio() { _audioElement.play(); }
 
-						var _pauseAudio = function _pauseAudio() { _audioElement.pause(); };
+						function _pauseAudio() { _audioElement.pause(); }
 
-						var _setVolume = function _setVolume(vol) { _audioElement.volume = vol; };
+						function _setVolume(vol) { _audioElement.volume = vol; }
 
-						var _stopAudio = function _stopAudio() {
+						function _stopAudio() {
 							_audioElement.pause();
 							_audioElement.currentTime = 0;
-						};
+						}
 
-						var _startPlayback = function _startPlayback() {
+						function _startPlayback() {
 							if (!_playing) {
 								_playing = true;
+								_newPosUnsubscribe = controller.onNewUserPosition(_adaptToNewPosition);
 								_playAudio();
 								_mapCircle.start();
 							}
-						};
+						}
 
-						var _pausePlayback = function _pausePlayback() {
+						function _pausePlayback() {
 							if (_playing) {
 								_playing = false;
+								_newPosUnsubscribe();
 								_pauseAudio();
 								_mapCircle.stop();
 							}
-						};
+						}
 
-						var _stopPlayback = function _stopPlayback() {
+						function _stopPlayback() {
 							if (_playing) {
 								_playing = false;
 								_stopAudio();
 								_mapCircle.stop();
 							}
-						};
+						}
 
-						var _togglePlayback = function _togglePlayback() {
+						function _togglePlayback() {
 							if (_playing) { _pausePlayback(); }
 							else { _startPlayback(); }
-						};
+						}
 
-						var _adaptToNewPosition = function _adaptToNewPosition(position) {
-							var currentPosition = new google.maps.LatLng(_lat, _lng);
-							var newPosition = position.latLng;
-
+						function _adaptToNewPosition(newPosition) {
 							var distance = google.maps.geometry.spherical
-									.computeDistanceBetween(currentPosition, newPosition);
+									.computeDistanceBetween(_pos, newPosition.latLng);
 
-							var volume = 1 -
-							             Math.pow(distance - _radius, 2) /
-							             Math.pow(_reach - _radius, 2); // TODO: Make sure _reach != _radius
+							var volume;
 
-							console.debug("-------------------------");
-							console.debug("Distance = " + distance);
-							console.debug("Radius   = " + _radius);
-							console.debug("Reach    = " + _reach);
-							console.debug("Calc1    = " + (Math.pow(Math.max(distance, _radius) - _radius, 2)));
-							console.debug("Calc2    = " + (Math.pow(_reach - _radius, 2)));
-							console.debug("Volume === " + volume);
-
-							volume = Math.min(volume, 1);
-							volume = Math.max(volume, 0);
-
-							console.debug("       === " + volume);
-							console.debug("-------------------------");
+							if (distance < _radius) { volume = 1; }
+							else if (distance > _reach) { volume = 0; }
+							else {
+								volume = 1 - Math.pow(distance - _radius, 2) /
+								             Math.pow(_reach - _radius, 2);
+							}
 
 							_setVolume(volume);
-
-							if (!_userIsInside && distance < _reach - MOVE_IN_MARGIN) {
-								_userIsInside = true;
-								_startPlayback();
-							} else if (_userIsInside && distance > _reach + MOVE_OUT_MARGIN) {
-								_userIsInside = false;
-								_stopPlayback();
-							}
 						};
 
 
@@ -308,14 +300,9 @@ define(['jquery', 'angular', 'MapCircle', 'gmaps'], function ($, angular, MapCir
 						//
 						var _mapCircle = new MapCircle(controller.map(), _lat, _lng, _radius, _reach);
 
-						//// Ways to stop and start playback
+						//// Ways to toggle playback
 						//
 						_mapCircle.onClick(_togglePlayback);
-
-						//// Callback for user position change
-						//
-						controller.onNewUserPosition(_adaptToNewPosition);
-
 					}
 				};
 			});
