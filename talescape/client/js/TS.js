@@ -1,7 +1,7 @@
 'use strict';
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-define(['jquery', 'angular', 'MapCircle', 'gmaps'], function ($, angular, MapCircle) {
+define(['jquery', 'angular', 'MapCircle', 'AudioPlayer', 'gmaps'], function ($, angular, MapCircle, AudioPlayer) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -30,7 +30,12 @@ define(['jquery', 'angular', 'MapCircle', 'gmaps'], function ($, angular, MapCir
 				//////                   //////
 
 				var _map;
-				var _options = {};
+
+				var _zoom = parseInt($attrs['zoom']);
+				var _lat = parseFloat($attrs['lat']);
+				var _lng = parseFloat($attrs['lng']);
+
+				var _userPos; // to cache
 
 				var _locationMarker;
 				var _locationMarkerAccuracyCircle;
@@ -42,30 +47,33 @@ define(['jquery', 'angular', 'MapCircle', 'gmaps'], function ($, angular, MapCir
 				////// Private methods //////
 				//////                 //////
 
-				function _onNewPosition(position) {
-					console.log(
-							"GeoLocation registered:\n" +
-							"- lat: " + position.coords.latitude + "\n" +
-							"- lng: " + position.coords.longitude
-					);
+				function _onNewUserPosition(userPos) {
+					if (!_userPos || _userPos.coords != userPos.coords) {
+						_userPos = userPos;
 
-					position.latLng = new google.maps.LatLng(
-							position.coords.latitude,
-							position.coords.longitude
-					);
+						console.log(
+								"GeoLocation registered:\n" +
+								"- lat: " + _userPos.coords.latitude + "\n" +
+								"- lng: " + _userPos.coords.longitude
+						);
 
-					_placeLocationMarker(position);
+						_userPos.latLng = new google.maps.LatLng(
+								userPos.coords.latitude,
+								userPos.coords.longitude
+						);
 
-					//_map.setCenter(position.latLng);
+						_placeLocationMarker(userPos);
 
-					for (var i in _onNewUserPositionCallbacks) {
-						//noinspection JSUnfilteredForInLoop
-						if (_onNewUserPositionCallbacks[i])
-							_onNewUserPositionCallbacks[i](position);
+						//_map.setCenter(userPos.latLng);
+
+						for (var i in _onNewUserPositionCallbacks) {
+							if (_onNewUserPositionCallbacks.hasOwnProperty(i))
+								_onNewUserPositionCallbacks[i](_userPos);
+						}
 					}
 				}
 
-				function _placeLocationMarker(position) {
+				function _placeLocationMarker(userPos) {
 					if (!_locationMarker) {
 						_locationMarker = new google.maps.Marker({
 							map      : _map,
@@ -74,7 +82,7 @@ define(['jquery', 'angular', 'MapCircle', 'gmaps'], function ($, angular, MapCir
 							draggable: false,
 							editable : false,
 							clickable: false,
-							position : position.latLng,
+							position: userPos.latLng,
 							icon     : {
 								url       : 'img/marker.png',
 								size      : new google.maps.Size(96, 96),
@@ -99,14 +107,14 @@ define(['jquery', 'angular', 'MapCircle', 'gmaps'], function ($, angular, MapCir
 						});
 					}
 
-					_locationMarker.setPosition(position.latLng);
-					_locationMarkerAccuracyCircle.setCenter(position.latLng);
+					_locationMarker.setPosition(userPos.latLng);
+					_locationMarkerAccuracyCircle.setCenter(userPos.latLng);
 
 					//// parseFloat is used below for testing purposes only;
 					//// The Chrome plugin to fake GPS location returns
-					//// a string from position.coords.accuracy
+					//// a string from userPos.coords.accuracy
 					//
-					_locationMarkerAccuracyCircle.setRadius(parseFloat(position.coords.accuracy));
+					_locationMarkerAccuracyCircle.setRadius(parseFloat(userPos.coords.accuracy));
 				}
 
 
@@ -116,35 +124,37 @@ define(['jquery', 'angular', 'MapCircle', 'gmaps'], function ($, angular, MapCir
 
 				//// Gather Options
 				//
-				$.extend(_options, {
+				var options = $.extend({
 					mapTypeId       : google.maps.MapTypeId.SATELLITE,              // default: satellite view
 					disableDefaultUI: true,                                         // default: no controls
 					styles: [
 						{featureType: "all", elementType: "labels", stylers: [
 							{visibility: "off"}
 						]}
-					],
-					zoom            : 0,                                            // start zoom level
-					center          : new google.maps.LatLng(52.3564841, 4.9520856) // start location (CWI)
-				}, $scope.$eval($attrs['options']));
+					]
+				}, { // user configurable options
+					zoom  : _zoom || 12,                                                  // start zoom level
+					center: new google.maps.LatLng(_lat || 52.3564841, _lng || 4.9520856) // start location (default: CWI)
+				});
 
 
-				//// Create the map
+				//// Create the map using those options
 				//
-				_map = new google.maps.Map($element.children(".canvas")[0], _options);
+				_map = new google.maps.Map($element.children(".canvas")[0], options);
 
 
 				//// Listen to user location
 				//
 				$.webshims.ready('geolocation', function () {
-					// navigator.geolocation.getCurrentPosition(function(position) {
-					// 	_map.setCenter(position.latLng)
-					// }, function(error) {
-					// 	// TODO: handle error getting initial position
-					// });
-					navigator.geolocation.watchPosition(_onNewPosition, function (error) {
+					navigator.geolocation.getCurrentPosition(function (userPos) {
+						_onNewUserPosition(userPos);
+						_map.setCenter(userPos.latLng);
+					}, function (error) {
+						// TODO: handle error getting initial position
+					}, { enableHighAccuracy: true, maximumAge: 0 });
+					navigator.geolocation.watchPosition(_onNewUserPosition, function (error) {
 						// TODO: handle error getting position
-					}, { enableHighAccuracy: true, maximumAge: 1000 });
+					}, { enableHighAccuracy: true});
 				});
 
 
@@ -152,12 +162,14 @@ define(['jquery', 'angular', 'MapCircle', 'gmaps'], function ($, angular, MapCir
 				////// Public methods //////
 				//////                //////
 
-				this.onNewUserPosition = function (handler) {
+				this.onNewUserPos = function (handler) {
 					// TODO: Use existing pubsub mechanism!
-					var index = _onNewUserPositionCallbacks.push(handler) - 1;
-					return function () {
-						_onNewUserPositionCallbacks[index] = null;
-					};
+					_onNewUserPositionCallbacks.push(handler);
+					if (_userPos) handler(_userPos);
+				};
+
+				this.userPos = function () {
+					return _userPos || null;
 				};
 
 				this.map = function () {
@@ -188,14 +200,6 @@ define(['jquery', 'angular', 'MapCircle', 'gmaps'], function ($, angular, MapCir
 		////////////////////////////////////////////////////////////
 
 			.directive('tsArea', function () {
-
-				///////////////////////
-				////// Constants //////
-				//////	         //////
-
-				var MOVE_IN_MARGIN = 0; // meters
-				var MOVE_OUT_MARGIN = 4; // meters
-
 				return {
 					restrict   : 'E',
 					templateUrl: 'partials/tsArea/tsArea.html',
@@ -209,100 +213,83 @@ define(['jquery', 'angular', 'MapCircle', 'gmaps'], function ($, angular, MapCir
 						////// Private variables //////
 						//////                   //////
 
-						var _lat = parseFloat(attrs['lat'   ]);
-						var _lng = parseFloat(attrs['lng'   ]);
-						var _pos = new google.maps.LatLng(_lat, _lng); // convenience
+						var _lat = parseFloat(attrs['lat']);
+						var _lng = parseFloat(attrs['lng']);
 						var _radius = parseInt(attrs['radius']);
 						var _reach = parseInt(attrs['reach']);
 
 						// TODO: Make sure (_radius < _reach)
+						// TODO: Store the above fields in _mapCircle only, and retrieve them there
 
-						var _newPosUnsubscribe = null;
+						var _mapCircle = new MapCircle(controller.map(), _lat, _lng, _radius, _reach);
 
-						var _audioElement = element.children('audio')[0];
+						var _audio = new AudioPlayer(element.children('audio')[0]);
 
 						var _playing = false;
-						var _userIsInside = false;
-
-
-						/////////////////////////////
-						////// Private methods //////
-						//////                 //////
-
-						//// Audio Controls
-						//
-						function _playAudio() { _audioElement.play(); }
-
-						function _pauseAudio() { _audioElement.pause(); }
-
-						function _setVolume(vol) { _audioElement.volume = vol; }
-
-						function _stopAudio() {
-							_audioElement.pause();
-							_audioElement.currentTime = 0;
-						}
-
-						function _startPlayback() {
-							if (!_playing) {
-								_playing = true;
-								_newPosUnsubscribe = controller.onNewUserPosition(_adaptToNewPosition);
-								_playAudio();
-								_mapCircle.start();
-							}
-						}
-
-						function _pausePlayback() {
-							if (_playing) {
-								_playing = false;
-								_newPosUnsubscribe();
-								_pauseAudio();
-								_mapCircle.stop();
-							}
-						}
-
-						function _stopPlayback() {
-							if (_playing) {
-								_playing = false;
-								_stopAudio();
-								_mapCircle.stop();
-							}
-						}
-
-						function _togglePlayback() {
-							if (_playing) { _pausePlayback(); }
-							else { _startPlayback(); }
-						}
-
-						function _adaptToNewPosition(newPosition) {
-							var distance = google.maps.geometry.spherical
-									.computeDistanceBetween(_pos, newPosition.latLng);
-
-							var volume;
-
-							if (distance < _radius) { volume = 1; }
-							else if (distance > _reach) { volume = 0; }
-							else {
-								volume = 1 - Math.pow(distance - _radius, 2) /
-								             Math.pow(_reach - _radius, 2);
-							}
-
-							_setVolume(volume);
-						};
 
 
 						/////////////////////////
 						////// Constructor //////
 						//////             //////
 
-						$(_audioElement).one('playing', _pauseAudio);
 
-						//// Implement the animation for the wave circles.
+						//// Click to toggle playback
 						//
-						var _mapCircle = new MapCircle(controller.map(), _lat, _lng, _radius, _reach);
+						_mapCircle.onClick(_toggle);
 
-						//// Ways to toggle playback
+						//// Request position updates to adjust volume
 						//
-						_mapCircle.onClick(_togglePlayback);
+						controller.onNewUserPos(_adaptVolume);
+
+
+						/////////////////////////////
+						////// Private methods //////
+						//////                 //////
+
+
+						function _start() {
+							if (!_playing) {
+								_playing = true;
+								_audio.loop();
+								_mapCircle.start();
+								_adaptVolume(controller.userPos());
+							}
+						}
+
+						function _pause() {
+							if (_playing) {
+								_playing = false;
+								_audio.pause();
+								_mapCircle.stop();
+							}
+						}
+
+						function _toggle() {
+							if (_playing) { _pause(); } else { _start(); }
+						}
+
+						function _adaptVolume(userPos) {
+							var volume;
+
+							if (!userPos) {
+								volume = 0;
+							} else {
+								var distance = google.maps.geometry.spherical.computeDistanceBetween(
+										new google.maps.LatLng(_lat, _lng),
+										userPos.latLng
+								);
+
+								if (distance > _reach) { volume = 0; }
+								else if (distance < _radius) { volume = 1; }
+								else {
+									volume = 1 - Math.pow(distance - _radius, 2) /
+									             Math.pow(_reach - _radius, 2);
+								}
+							}
+
+							_audio.setVolume(volume);
+						}
+
 					}
 				};
 			});

@@ -16,9 +16,9 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 	var ANI_WAVE_SPEED = 7;  // factor
 
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	return function (map, lat, lng, radius, reach) { ///////////////////////////////////////////////////////////////////
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 		///////////////////////////////
@@ -27,8 +27,9 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 
 		var _timer;
 		var _mainCircle;
-		var _circle1;
-		var _circle2;
+		var _aniCircle1;
+		var _aniCircle2;
+		var _reachCircle;
 		var _state;
 		var _playing = false;
 		var _currentZoom = map.getZoom();
@@ -54,14 +55,14 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 			_incrementAnimationState();
 
 			var state1 = _animationState(0);
-			_circle1.setOptions({
+			_aniCircle1.setOptions({
 				radius      : radius + _zoomScale() * state1 * ANI_WAVE_SPEED,
 				strokeWeight: (ANI_CIRCLE_MAX_WIDTH - state1 * ANI_CIRCLE_MAX_WIDTH / ANI_HALT_STATE),
 				visible     : (state1 < ANI_HALT_STATE)
 			});
 
 			var state2 = _animationState(ANI_SECOND_WAVE_DELAY);
-			_circle2.setOptions({
+			_aniCircle2.setOptions({
 				radius      : radius + _zoomScale() * state2 * ANI_WAVE_SPEED,
 				strokeWeight: (ANI_CIRCLE_MAX_WIDTH - state2 * ANI_CIRCLE_MAX_WIDTH / ANI_HALT_STATE),
 				visible     : (state2 < ANI_HALT_STATE)
@@ -104,10 +105,21 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				zIndex        : 2,
 				visible       : false
 			});
+			var reachCircleOptions = $.extend({}, commonCircleOptions, {
+				clickable    : false,
+				fillOpacity  : 0,
+				strokeColor  : 'yellow',
+				strokeOpacity: 1,
+				strokeWeight : 1,
+				zIndex       : 3,
+				visible      : true,
+				radius       : reach
+			});
 
 			_mainCircle = new google.maps.Circle(mainCircleOptions);
-			_circle1 = new google.maps.Circle(aniCircleOptions);
-			_circle2 = new google.maps.Circle(aniCircleOptions);
+			_aniCircle1 = new google.maps.Circle(aniCircleOptions);
+			_aniCircle2 = new google.maps.Circle(aniCircleOptions);
+			_reachCircle = new google.maps.Circle(reachCircleOptions);
 		})();
 
 		//// Listen for zoom-level change
@@ -141,14 +153,13 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				_playing = false;
 				_mainCircle.setOptions({ fillColor: 'green', strokeColor: 'green' });
 				clearInterval(_timer);
-				_circle1.setOptions({ visible: false });
-				_circle2.setOptions({ visible: false });
+				_aniCircle1.setOptions({ visible: false });
+				_aniCircle2.setOptions({ visible: false });
 			}
 		};
 
 		this.toggle = function () {
-			if (_playing) { this.stop(); }
-			else { this.start(); }
+			if (_playing) { this.stop(); } else { this.start(); }
 		};
 
 		this.onClick = function (handler) {
