@@ -4,20 +4,24 @@
 		<meta charset="utf-8" />
 		<title ng-bind="title"></title>
 		<link rel="stylesheet" href="index.css">
+		<meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
 		<script data-main="js/main.js" src="js/lib/requirejs/require.js"></script>
 	</head>
 	<body>
-	<ts-map options="{zoom: 18, center: new google.maps.LatLng(52.3567841, 4.9520856)}">
-		<ts-area lat="52.3569524" lng="4.9538351" radius="10" reach="100" audio="audio/tail toddle.mp3"></ts-area>
-		<ts-area lat="52.3569524" lng="4.9536351" radius="10" reach="100" audio="audio/tail toddle.mp3"></ts-area>
-		<ts-area lat="52.3566025" lng="4.9540175" radius="10" reach="75" audio="audio/cairnomount.mp3"></ts-area>
-
-
-		<ts-area lat="52.1662291" lng="4.4837918" radius="5" reach="50" audio="audio/cairnomount.mp3"></ts-area>
-		<ts-area lat="52.1673828" lng="4.4855552" radius="5" reach="50" audio="audio/girlwho.mp3"></ts-area>
-		<ts-area lat="52.1709445" lng="4.4884461" radius="5" reach="50" audio="audio/pipers hut.mp3"></ts-area>
-		<ts-area lat="52.1731365" lng="4.4912169" radius="5" reach="50" audio="audio/saewill.mp3"></ts-area>
-		<ts-area lat="52.1759668" lng="4.4948801" radius="5" reach="50" audio="audio/wearie.mp3"></ts-area>
+	<ts-map zoom="18" lat="52.3567841" lng="4.9520856">
+		<ts-area lat="52.35538852290322"
+		         lng="4.952993988990784"
+		         radius="15"
+		         reach="60"
+		         path="etp~Hekf]uEiJxDaGjC~Ku@tA"
+		         audio="audio/tail toddle.mp3"
+		         loudness="1"></ts-area>
+		<ts-area lat="52.35696443453904" lng="4.9532246589660645"
+		         radius="15"
+		         reach="60"
+		         path="_~p~Hslf]xIcMkGd@|EpNkHsA"
+		         audio="audio/saewill.mp3"
+		         loudness=".2"></ts-area>
 	</ts-map>
 	</body>
 </html>

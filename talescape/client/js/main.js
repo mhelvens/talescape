@@ -17,35 +17,41 @@ require.config({
 	}
 });
 
-//// Load Polyfills
+//// Load javascript patches before anything else
 //
-requirejs(['jquery', 'polyfiller'], function ($) {
+requirejs(['patches'], function () {
 
-	console.info('Loading polyfills...');
+	//// Load Polyfills
+	//
+	requirejs(['jquery', 'polyfiller'], function ($) {
 
-	$.webshims.setOptions({
-		waitReady: false,
-		basePath : "/js/lib/webshim/src/shims/"
+		console.info('Loading polyfills...');
+
+		$.webshims.setOptions({
+			waitReady: false,
+			basePath : "/js/lib/webshim/src/shims/"
+		});
+
+		$.webshims.setOptions('geolocation', {
+			confirmText: 'Talescape needs to know your GPS location. Is that OK?'
+		});
+		$.webshims.polyfill('geolocation');
+
+		console.log('Polyfills loaded.');
+
 	});
 
-	$.webshims.setOptions('geolocation', {
-		confirmText: 'Talescape needs to know your GPS location. Is that OK?'
+	//// Bootstrap Angular
+	//
+	requirejs(['angular', 'domReady!', 'TS'], function (angular) {
+
+		console.info('Bootstrapping Angular...');
+
+		angular.bootstrap(document, ['TS']);
+
+		console.log('Angular bootstrapped.');
+
 	});
-	$.webshims.polyfill('geolocation');
-
-	console.log('Polyfills loaded.');
-
-});
-
-//// Bootstrap Angular
-//
-requirejs(['angular', 'domReady!', 'TS'], function (angular) {
-
-	console.info('Bootstrapping Angular...');
-
-	angular.bootstrap(document, ['TS']);
-
-	console.log('Angular bootstrapped.');
 
 });
 

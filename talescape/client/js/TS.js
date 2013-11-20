@@ -1,7 +1,7 @@
 'use strict';
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-define(['jquery', 'angular', 'MapCircle', 'AudioPlayer', 'gmaps'], function ($, angular, MapCircle, AudioPlayer) {
+define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($, angular, SoundSource, AudioPlayer) {//
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -14,6 +14,7 @@ define(['jquery', 'angular', 'MapCircle', 'AudioPlayer', 'gmaps'], function ($, 
 		// ApplicationController ///////////////////////////////////
 		////////////////////////////////////////////////////////////
 
+
 			.controller('ApplicationController', ['$scope', function ($scope) {
 				$scope.title = 'Talescape';
 			}])
@@ -23,84 +24,134 @@ define(['jquery', 'angular', 'MapCircle', 'AudioPlayer', 'gmaps'], function ($, 
 		// MapController ///////////////////////////////////////////
 		////////////////////////////////////////////////////////////
 
+
 			.controller('MapController', ['$scope', '$element', '$attrs', function ($scope, $element, $attrs) {
+
+
+				////////////////////////////
+				////// Public methods //////
+				//////                //////
+
+
+				this.onNewUserPos = function (handler) {
+					_newUserPosCallbacks.add(handler);
+				};
+
+				this.userPos = function () {
+					return _userPos || undefined;
+				};
+
+				this.map = function () {
+					return _map;
+				};
+
 
 				///////////////////////////////
 				////// Private variables //////
 				//////                   //////
 
-				var _map;
 
-				var _zoom = parseInt($attrs['zoom']);
-				var _lat = parseFloat($attrs['lat']);
-				var _lng = parseFloat($attrs['lng']);
+				var _newUserPosCallbacks = $.Callbacks('unique');
 
-				var _userPos; // to cache
 
-				var _locationMarker;
-				var _locationMarkerAccuracyCircle;
+				/////////////////////////
+				////// Constructor //////
+				//////             //////
 
-				var _onNewUserPositionCallbacks = [];
+
+				//// Gather Options
+				//
+				var options = $.extend({
+					mapTypeId       : google.maps.MapTypeId.SATELLITE,  // default: satellite view
+					disableDefaultUI: true,                             // default: no controls
+					styles          : [
+						{featureType: "all", elementType: "labels", stylers: [
+							{visibility: "off"}
+						]}
+					]
+				}, { // user configurable options
+					zoom  : parseInt($attrs['zoom']) || 20,           // start zoom level
+					center: new google.maps.LatLng(
+							parseFloat($attrs['lat']) || 52.3564841,
+							parseFloat($attrs['lng']) || 4.9520856)   // start location (default: CWI)
+				});
+
+
+				//// Create the map using those options
+				//
+				var _map = new google.maps.Map($element.children(".canvas")[0], options);
+
+
+				//// Listen to user location
+				//
+				$.webshims.ready('geolocation', function () {
+					navigator.geolocation.watchPosition(_onNewUserPosition, function (error) {
+						console.error(error.message);
+					}, { enableHighAccuracy: true, maximumAge: 500});
+				});
 
 
 				/////////////////////////////
 				////// Private methods //////
 				//////                 //////
 
+
+				var _userPos;
+
 				function _onNewUserPosition(userPos) {
-					if (!_userPos || _userPos.coords != userPos.coords) {
+					if (!_userPos || (_userPos.coords.latitude != userPos.coords.latitude ||
+					                  _userPos.coords.longitude != userPos.coords.longitude ||
+					                  _userPos.coords.accuracy != userPos.coords.accuracy)) {
 						_userPos = userPos;
 
 						console.log(
 								"GeoLocation registered:\n" +
-								"- lat: " + _userPos.coords.latitude + "\n" +
-								"- lng: " + _userPos.coords.longitude
+								"- latitude:  " + _userPos.coords.latitude + "\n" +
+								"- longitude: " + _userPos.coords.longitude + "\n" +
+								"- accuracy:  " + _userPos.coords.accuracy
 						);
 
 						_userPos.latLng = new google.maps.LatLng(
-								userPos.coords.latitude,
-								userPos.coords.longitude
+								_userPos.coords.latitude,
+								_userPos.coords.longitude
 						);
 
-						_placeLocationMarker(userPos);
+						_placeLocationMarker(_userPos);
 
-						//_map.setCenter(userPos.latLng);
+						_map.setCenter(userPos.latLng);
 
-						for (var i in _onNewUserPositionCallbacks) {
-							if (_onNewUserPositionCallbacks.hasOwnProperty(i))
-								_onNewUserPositionCallbacks[i](_userPos);
-						}
+						_newUserPosCallbacks.fire(_userPos);
 					}
 				}
+
+				var _locationMarker;
+				var _locationMarkerAccuracyCircle;
 
 				function _placeLocationMarker(userPos) {
 					if (!_locationMarker) {
 						_locationMarker = new google.maps.Marker({
 							map      : _map,
 							title    : "You Are Here",
-							zIndex   : 3,
+							zIndex   : 999, // always on the foreground
 							draggable: false,
 							editable : false,
 							clickable: false,
-							position: userPos.latLng,
+							position : userPos.latLng,
 							icon     : {
-								url       : 'img/marker.png',
-								size      : new google.maps.Size(96, 96),
-								origin    : new google.maps.Point(0, 0),
-								anchor    : new google.maps.Point(16, 16),
-								scaledSize: new google.maps.Size(32, 32)
+								url   : '//maps.gstatic.com/mapfiles/mobile/mobileimgs2.png',
+								size  : new google.maps.Size(22, 22),
+								origin: new google.maps.Point(0, 18),
+								anchor: new google.maps.Point(11, 11)
 							}
 						});
-					}
 
-					if (!_locationMarkerAccuracyCircle) {
 						_locationMarkerAccuracyCircle = new google.maps.Circle({
 							map          : _map,
 							strokeColor  : '#4190da',
 							strokeOpacity: 0.8,
-							strokeWeight : 2,
+							strokeWeight: 1,
 							fillColor    : '#4190da',
-							fillOpacity  : 0.35,
+							fillOpacity : 0.45,
 							draggable    : false,
 							editable     : false,
 							clickable    : false
@@ -118,63 +169,172 @@ define(['jquery', 'angular', 'MapCircle', 'AudioPlayer', 'gmaps'], function ($, 
 				}
 
 
-				/////////////////////////
-				////// Constructor //////
-				//////             //////
+				////////////////////////////////////////////////////
+				////// Functionality to add Circles and Paths //////
+				//////                                        //////
 
-				//// Gather Options
-				//
-				var options = $.extend({
-					mapTypeId       : google.maps.MapTypeId.SATELLITE,              // default: satellite view
-					disableDefaultUI: true,                                         // default: no controls
-					styles: [
-						{featureType: "all", elementType: "labels", stylers: [
-							{visibility: "off"}
-						]}
+				var editableRadiusOptions = {
+					map           : _map,
+					clickable     : false,
+					draggable     : true,
+					editable      : true,
+					fillColor     : 'yellow',
+					fillOpacity   : 0.4,
+					strokeColor   : 'yellow',
+					strokeOpacity : 0.9,
+					strokePosition: google.maps.INSIDE,
+					strokeWeight  : 4,
+					zIndex        : 12, // radius circle must appear in front of reach circle and path
+					visible       : true
+				};
+
+				var editableReachOptions = {
+					map           : _map,
+					clickable     : false,
+					draggable     : false,
+					editable      : true,
+					fillOpacity   : 0,
+					strokeColor   : 'yellow',
+					strokeOpacity : 0.9,
+					strokePosition: google.maps.OUTSIDE,
+					strokeWeight  : 1,
+					zIndex        : 11,
+					visible       : true
+				};
+
+				var editablePathOptions = {
+					clickable    : false,
+					draggable    : true,
+					editable     : true,
+					strokeColor  : 'yellow',
+					strokeOpacity: 0.9,
+					strokeWeight : 2,
+					zIndex       : 11,
+					visible      : true,
+					icons        : [
+						{
+							offset: '100%',
+							icon  : {
+								path        : google.maps.SymbolPath.FORWARD_OPEN_ARROW,
+								strokeWeight: 2,
+								scale       : 4
+							}
+						}
 					]
-				}, { // user configurable options
-					zoom  : _zoom || 12,                                                  // start zoom level
-					center: new google.maps.LatLng(_lat || 52.3564841, _lng || 4.9520856) // start location (default: CWI)
+				};
+
+				var _drawingManager = new google.maps.drawing.DrawingManager({
+					map                  : _map,
+					circleOptions        : editableRadiusOptions,
+					polylineOptions      : editablePathOptions,
+					drawingControlOptions: { drawingModes: [
+						google.maps.drawing.OverlayType.CIRCLE,
+						google.maps.drawing.OverlayType.POLYLINE
+					] }
 				});
 
 
-				//// Create the map using those options
-				//
-				_map = new google.maps.Map($element.children(".canvas")[0], options);
+//				var overlay = new google.maps.OverlayView();
+//				overlay.draw = function() {};
+//				overlay.setMap(_map);
+//				var p = overlay.getProjection().fromLatLngToContainerPixel(radiusCircle.getCenter());
+//				$(_map).trigger($.Event('click', { pageX: p.x, pageY: p.y }));
 
 
-				//// Listen to user location
-				//
-				$.webshims.ready('geolocation', function () {
-					navigator.geolocation.getCurrentPosition(function (userPos) {
-						_onNewUserPosition(userPos);
-						_map.setCenter(userPos.latLng);
-					}, function (error) {
-						// TODO: handle error getting initial position
-					}, { enableHighAccuracy: true, maximumAge: 0 });
-					navigator.geolocation.watchPosition(_onNewUserPosition, function (error) {
-						// TODO: handle error getting position
-					}, { enableHighAccuracy: true});
+				var _newSources = [];
+
+				google.maps.event.addListener(_drawingManager, 'circlecomplete', function (radiusCircle) {
+					var newSource = {
+						radius: radiusCircle,
+						reach : new google.maps.Circle($.extend({
+							center: radiusCircle.getCenter(),
+							radius: radiusCircle.getRadius() + 30 * Math.pow(2, 18 - _map.getZoom())
+						}, editableReachOptions))
+					};
+
+					_prepareEditableSource(newSource);
+
+					_logNewSourceInfo();
 				});
 
+				google.maps.event.addListener(_drawingManager, 'polylinecomplete', function (path) {
+					var center = path.getPath().getAt(0);
+					var newSource = {
+						path  : path,
+						radius: new google.maps.Circle($.extend({
+							center: center,
+							radius: 10 * Math.pow(2, 18 - _map.getZoom())
+						}, editableRadiusOptions)),
+						reach : new google.maps.Circle($.extend({
+							center: center,
+							radius: (10 + 30) * Math.pow(2, 18 - _map.getZoom())
+						}, editableReachOptions))
+					};
 
-				////////////////////////////
-				////// Public methods //////
-				//////                //////
+					_prepareEditableSource(newSource);
 
-				this.onNewUserPos = function (handler) {
-					// TODO: Use existing pubsub mechanism!
-					_onNewUserPositionCallbacks.push(handler);
-					if (_userPos) handler(_userPos);
-				};
+					google.maps.event.addListener(newSource.radius, 'center_changed', function () {
+						newSource.path.getPath().setAt(0, newSource.radius.getCenter());
+						_logNewSourceInfo();
+					});
 
-				this.userPos = function () {
-					return _userPos || null;
-				};
+					google.maps.event.addListener(path.getPath(), 'insert_at', function () { _logNewSourceInfo(); });
+					google.maps.event.addListener(path.getPath(), 'remove_at', function () { _logNewSourceInfo(); });
+					google.maps.event.addListener(path.getPath(), 'set_at', function () { _logNewSourceInfo(); });
 
-				this.map = function () {
-					return _map;
-				};
+					_logNewSourceInfo();
+				});
+
+				var OKtoLog = true;
+
+				function _logNewSourceInfo() {
+					if (OKtoLog) {
+						OKtoLog = false;
+						window.setTimeout(function () { OKtoLog = true; }, 100);
+						console.debug("----------------------------------------");
+						_newSources.map(function (s) {
+							console.debug('<ts-area lat="{{1}}" lng="{{2}}" radius="{{3}}" reach="{{4}}"{{5}} audio=""></ts-area>'
+									.format(s.radius.getCenter().lat(),
+											s.radius.getCenter().lng(),
+											s.radius.getRadius(),
+											s.reach.getRadius(),
+											!s.path ? "" :
+											' path="' + google.maps.geometry.encoding.encodePath(s.path.getPath())
+													.replace(/(\\|")/g, '\\$1') + '"'));
+						});
+						console.debug("----------------------------------------");
+					}
+				}
+
+
+				function _prepareEditableSource(newSource) {
+					google.maps.event.addListener(newSource.radius, 'center_changed', function () {
+						newSource.reach.setCenter(newSource.radius.getCenter());
+						_logNewSourceInfo();
+					});
+
+					google.maps.event.addListener(newSource.radius, 'radius_changed', function () {
+						if (newSource.reach.getRadius() < newSource.radius.getRadius() + 5) {
+							newSource.reach.setRadius(newSource.radius.getRadius() + 5);
+						}
+						_logNewSourceInfo();
+					});
+
+					google.maps.event.addListener(newSource.reach, 'radius_changed', function () {
+						if (newSource.reach.getRadius() < newSource.radius.getRadius() + 5) {
+							newSource.radius.setRadius(Math.max(2, newSource.reach.getRadius() - 5));
+						}
+						_logNewSourceInfo();
+					});
+
+					google.maps.event.addListener(newSource.radius, 'center_changed', function () {
+						newSource.reach.setCenter(newSource.radius.getCenter());
+						_logNewSourceInfo();
+					});
+
+					return _newSources.push(newSource);
+				}
+
 
 			}])
 
@@ -182,6 +342,7 @@ define(['jquery', 'angular', 'MapCircle', 'AudioPlayer', 'gmaps'], function ($, 
 		////////////////////////////////////////////////////////////
 		// 'ts-map' Directive //////////////////////////////////////
 		////////////////////////////////////////////////////////////
+
 
 			.directive('tsMap', function () {
 				return {
@@ -199,6 +360,7 @@ define(['jquery', 'angular', 'MapCircle', 'AudioPlayer', 'gmaps'], function ($, 
 		// 'ts-area' Directive /////////////////////////////////////
 		////////////////////////////////////////////////////////////
 
+
 			.directive('tsArea', function () {
 				return {
 					restrict   : 'E',
@@ -209,21 +371,23 @@ define(['jquery', 'angular', 'MapCircle', 'AudioPlayer', 'gmaps'], function ($, 
 
 					link: function (scope, element, attrs, controller) {
 
+
 						///////////////////////////////
 						////// Private variables //////
 						//////                   //////
 
-						var _lat = parseFloat(attrs['lat']);
-						var _lng = parseFloat(attrs['lng']);
-						var _radius = parseInt(attrs['radius']);
-						var _reach = parseInt(attrs['reach']);
+						var _loudness = parseFloat(attrs['loudness']);
 
-						// TODO: Make sure (_radius < _reach)
-						// TODO: Store the above fields in _mapCircle only, and retrieve them there
+						var _soundSource = new SoundSource(
+								controller.map(),
+								parseFloat(attrs['lat']),
+								parseFloat(attrs['lng']),
+								parseFloat(attrs['radius']),
+								parseFloat(attrs['reach']),
+								attrs['path']);
 
-						var _mapCircle = new MapCircle(controller.map(), _lat, _lng, _radius, _reach);
-
-						var _audio = new AudioPlayer(element.children('audio')[0]);
+						var _audio = new AudioPlayer(
+								element.children('audio')[0]);
 
 						var _playing = false;
 
@@ -235,11 +399,13 @@ define(['jquery', 'angular', 'MapCircle', 'AudioPlayer', 'gmaps'], function ($, 
 
 						//// Click to toggle playback
 						//
-						_mapCircle.onClick(_toggle);
+						_soundSource.onClick(_toggle);
 
-						//// Request position updates to adjust volume
+						//// Continuously adjust volume
 						//
+						_adaptVolume(controller.userPos());
 						controller.onNewUserPos(_adaptVolume);
+						_soundSource.onNewPos(_adaptVolume);
 
 
 						/////////////////////////////
@@ -251,7 +417,7 @@ define(['jquery', 'angular', 'MapCircle', 'AudioPlayer', 'gmaps'], function ($, 
 							if (!_playing) {
 								_playing = true;
 								_audio.loop();
-								_mapCircle.start();
+								_soundSource.start();
 								_adaptVolume(controller.userPos());
 							}
 						}
@@ -260,7 +426,7 @@ define(['jquery', 'angular', 'MapCircle', 'AudioPlayer', 'gmaps'], function ($, 
 							if (_playing) {
 								_playing = false;
 								_audio.pause();
-								_mapCircle.stop();
+								_soundSource.stop();
 							}
 						}
 
@@ -268,24 +434,41 @@ define(['jquery', 'angular', 'MapCircle', 'AudioPlayer', 'gmaps'], function ($, 
 							if (_playing) { _pause(); } else { _start(); }
 						}
 
-						function _adaptVolume(userPos) {
+						function _linearProgression(close, far, here) {
+							return (here - close) / (far - close);
+						}
+
+						function _quadraticProgression(close, far, here) {
+							return Math.pow(here - close, 2) /
+							       Math.pow(far - close, 2);
+						}
+
+						function _adaptVolume() {
 							var volume;
 
-							if (!userPos) {
+							if (!controller.userPos()) {
 								volume = 0;
 							} else {
 								var distance = google.maps.geometry.spherical.computeDistanceBetween(
-										new google.maps.LatLng(_lat, _lng),
-										userPos.latLng
+										_soundSource.pos(),
+										controller.userPos().latLng
 								);
 
-								if (distance > _reach) { volume = 0; }
-								else if (distance < _radius) { volume = 1; }
+								if (distance > _soundSource.reach()) {
+									volume = 0;
+								}
+								else if (distance < _soundSource.radius()) {
+									volume = 1;
+								}
 								else {
-									volume = 1 - Math.pow(distance - _radius, 2) /
-									             Math.pow(_reach - _radius, 2);
+									volume = 1 - _quadraticProgression(
+											_soundSource.radius(),
+											_soundSource.reach(),
+											distance);
 								}
 							}
+
+							volume *= _loudness;
 
 							_audio.setVolume(volume);
 						}

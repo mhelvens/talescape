@@ -4,7 +4,7 @@ define(function () { ///////////////////////////////////////////////////////////
 
 
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	return function (element) { ////////////////////////////////////////////////////////////////////////////////////////
+	return function (_audioElement) { //////////////////////////////////////////////////////////////////////////////////
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -12,8 +12,6 @@ define(function () { ///////////////////////////////////////////////////////////
 		////// Private variables //////
 		//////                   //////
 
-
-		var _audioElement = element;
 		var _volume = 0;
 
 		// TODO: find out if we need to store volume locally, or if _audioElement.volume stays valid when paused
@@ -23,21 +21,20 @@ define(function () { ///////////////////////////////////////////////////////////
 		////// Public methods //////
 		//////                //////
 
-
 		//// Querying ////
 
-		this.playing = function playing() { return !_audioElement.paused; };
+		this.playing = function () { return !_audioElement.paused; };
 
-		this.looping = function looping() { return this.playing() && _audioElement.loop; };
+		this.looping = function () { return this.playing() && _audioElement.loop; };
 
-		this.paused = function paused() { return _audioElement.paused; };
+		this.paused = function () { return _audioElement.paused; };
 
-		this.stopped = function stopped() { return this.paused() && _audioElement.currentTime == 0; };
+		this.stopped = function () { return this.paused() && _audioElement.currentTime == 0; };
 
 
 		//// Basic Controls ////
 
-		this.play = function play() {
+		this.play = function () {
 			if (this.paused()) {
 				_audioElement.play();
 				_refreshVolume();
@@ -45,7 +42,7 @@ define(function () { ///////////////////////////////////////////////////////////
 			}
 		};
 
-		this.loop = function loop() {
+		this.loop = function () {
 			if (this.paused()) {
 				_audioElement.play();
 				_refreshVolume();
@@ -53,13 +50,13 @@ define(function () { ///////////////////////////////////////////////////////////
 			}
 		};
 
-		this.pause = function pause() {
+		this.pause = function () {
 			if (this.playing()) {
 				_audioElement.pause();
 			}
 		};
 
-		this.stop = function stop() {
+		this.stop = function () {
 			if (this.playing()) {
 				_audioElement.pause();
 				_audioElement.currentTime = 0;
@@ -69,26 +66,25 @@ define(function () { ///////////////////////////////////////////////////////////
 
 		//// Toggling ////
 
-		this.togglePlayPause = function togglePlayPause() { if (this.playing()) { this.pause(); } else { this.play(); } };
+		this.togglePlayPause = function () { if (this.playing()) { this.pause(); } else { this.play(); } };
 
-		this.toggleLoopPause = function toggleLoopPause() { if (this.playing()) { this.pause(); } else { this.loop(); } };
+		this.toggleLoopPause = function () { if (this.playing()) { this.pause(); } else { this.loop(); } };
 
-		this.togglePlayStop = function togglePlayStop() { if (this.playing()) { this.stop(); } else { this.play(); } };
+		this.togglePlayStop = function () { if (this.playing()) { this.stop(); } else { this.play(); } };
 
-		this.toggleLoopStop = function toggleLoopStop() { if (this.playing()) { this.stop(); } else { this.loop(); } };
+		this.toggleLoopStop = function () { if (this.playing()) { this.stop(); } else { this.loop(); } };
 
 
 		//// Volume ////
 
-		this.volume = function volume() { return _volume; };
+		this.volume = function () { return _volume; };
 
-		this.setVolume = function setVolume(newVol) { _audioElement.volume = _volume = newVol; };
+		this.setVolume = function (newVol) { _audioElement.volume = _volume = newVol; };
 
 
 		/////////////////////////////
 		////// Private methods //////
 		//////                 //////
-
 
 		function _refreshVolume() {
 			_audioElement.volume = _volume;
