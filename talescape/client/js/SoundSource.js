@@ -7,7 +7,7 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 	////// Constants //////
 	//////           //////
 
-	var ANIMATE = false;
+	var ANIMATE = true;
 
 	var ANI_FIRST_STATE = 27; // frames
 	var ANI_HALT_STATE = 23; // frames
@@ -17,8 +17,8 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 	var ANI_CIRCLE_MAX_WIDTH = 4;  // meters
 	var ANI_WAVE_SPEED = 7;  // factor
 
-	var PATH_STEP_LENGTH = 3/*m*/;
-	var PATH_STEP_TIME = 150/*ms*/;
+	var PATH_STEP_LENGTH = 1/*m*/;
+	var PATH_STEP_TIME = 50/*ms*/;
 
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	return function (_map, _lat, _lng, _radius, _reach, _encodedPath) { ////////////////////////////////////////////////
@@ -97,6 +97,8 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 		////// Private variables //////
 		//////                   //////
 
+        var _staticPos;
+
 		var _mainCircle;
 		var _aniCircle1;
 		var _aniCircle2;
@@ -165,43 +167,46 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 		})();
 
 
-		//// Set up the Path Steps
-		//
-		var _path = google.maps.geometry.encoding.decodePath(_encodedPath);
+        if (!_encodedPath) {
+            _staticPos = new google.maps.LatLng(_lat, _lng);
+        } else {
+            var _path = google.maps.geometry.encoding.decodePath(_encodedPath);
 
-		var _pathSteps = [];
-		(function () {
-			var remainder = 0;
-			for (var segment = 1; segment < _path.length; ++segment) {
-				var from = _path[segment - 1];
-				var to = _path[segment];
+            //// Set up the Path Steps
+            //
+            var _pathSteps = [];
+            (function () {
+                var remainder = 0;
+                for (var segment = 1; segment < _path.length; ++segment) {
+                    var from = _path[segment - 1];
+                    var to = _path[segment];
 
-				var distance = google.maps.geometry.spherical.computeDistanceBetween(from, to);
-				var heading = google.maps.geometry.spherical.computeHeading(from, to);
+                    var distance = google.maps.geometry.spherical.computeDistanceBetween(from, to);
+                    var heading = google.maps.geometry.spherical.computeHeading(from, to);
 
-				for (var i = 0; remainder + i * PATH_STEP_LENGTH < distance; ++i) {
-					_pathSteps.push(google.maps.geometry.spherical.computeOffset(
-							from,
-							remainder + i * PATH_STEP_LENGTH,
-							heading));
-				}
+                    for (var i = 0; remainder + i * PATH_STEP_LENGTH < distance; ++i) {
+                        _pathSteps.push(google.maps.geometry.spherical.computeOffset(
+                            from,
+                            remainder + i * PATH_STEP_LENGTH,
+                            heading));
+                    }
 
-				remainder = remainder + i * PATH_STEP_LENGTH - distance;
-			}
-		})();
+                    remainder = remainder + i * PATH_STEP_LENGTH - distance;
+                }
+            })();
 
-		//// Set up Movement along Path
-		//
-		var _currentPathStep = 0;
-		var _startTime = Date.now();
-		window.setInterval(function () {
-			//_currentPathStep = (Date.now() - _startTime) % PATH_STEP_TIME;
-			_currentPathStep = (_currentPathStep + 1) % _pathSteps.length;
-			_mainCircle.setCenter(_pos());
-			_reachCircle.setCenter(_pos());
-			_newPosCallbacks.fire(_pos());
-		}, PATH_STEP_TIME);
-
+            //// Set up Movement along Path
+            //
+            var _currentPathStep = 0;
+//            var _startTime = Date.now();
+            window.setInterval(function () {
+                //_currentPathStep = (Date.now() - _startTime) % PATH_STEP_TIME;
+                _currentPathStep = (_currentPathStep + 1) % _pathSteps.length;
+                _mainCircle.setCenter(_pos());
+                _reachCircle.setCenter(_pos());
+                _newPosCallbacks.fire(_pos());
+            }, PATH_STEP_TIME);
+        }
 
 		//// Listen for zoom-level change
 		//
@@ -216,9 +221,9 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 		////// Private methods //////
 		//////                 //////
 
-		function _pos() {
-			return _pathSteps[_currentPathStep];
-		}
+        function _pos() {
+            return _encodedPath ? _pathSteps[_currentPathStep] : _staticPos;
+        }
 
 		function _animationState(delay) {
 			return (_state + delay) % ANI_END_STATE;

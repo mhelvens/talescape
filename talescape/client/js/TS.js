@@ -37,6 +37,10 @@ define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($
 					_newUserPosCallbacks.add(handler);
 				};
 
+                this.onGlobalStart = function (handler) {
+                    _globalStartCallbacks.add(handler);
+                };
+
 				this.userPos = function () {
 					return _userPos || undefined;
 				};
@@ -52,6 +56,7 @@ define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($
 
 
 				var _newUserPosCallbacks = $.Callbacks('unique');
+                var _globalStartCallbacks = $.Callbacks('unique');
 
 
 				/////////////////////////
@@ -89,6 +94,13 @@ define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($
 						console.error(error.message);
 					}, { enableHighAccuracy: true, maximumAge: 500});
 				});
+
+
+                //// Listen to map click
+                //
+                google.maps.event.addListener(_map, 'click', function () {
+                    _globalStartCallbacks.fire();
+                });
 
 
 				/////////////////////////////
@@ -407,6 +419,21 @@ define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($
 						controller.onNewUserPos(_adaptVolume);
 						_soundSource.onNewPos(_adaptVolume);
 
+                        //// Start on global start
+                        //
+                        var globalStartDone = false;
+                        controller.onGlobalStart(function () {
+                            if (!globalStartDone) {
+                                globalStartDone = true;
+                                _start();
+                                _audio.setVolume(0); // TODO: Figure out why this is necessary for mobile!
+                            }
+                        });
+
+                        //// Start the Sound Source now! (Remove for phone use)
+                        //
+//                        window.setTimeout(_start, 500);
+
 
 						/////////////////////////////
 						////// Private methods //////
@@ -434,9 +461,9 @@ define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($
 							if (_playing) { _pause(); } else { _start(); }
 						}
 
-						function _linearProgression(close, far, here) {
-							return (here - close) / (far - close);
-						}
+//						function _linearProgression(close, far, here) {
+//							return (here - close) / (far - close);
+//						}
 
 						function _quadraticProgression(close, far, here) {
 							return Math.pow(here - close, 2) /
@@ -444,19 +471,21 @@ define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($
 						}
 
 						function _adaptVolume() {
-							var volume;
+							var volume = 0;
 
-							if (!controller.userPos()) {
-								volume = 0;
-							} else {
+							if (controller.userPos() && controller.userPos().latLng) {
 								var distance = google.maps.geometry.spherical.computeDistanceBetween(
 										_soundSource.pos(),
 										controller.userPos().latLng
 								);
 
-								if (distance > _soundSource.reach()) { volume = 0; }
-								else if (distance < _soundSource.radius()) { volume = 1; }
-								else {
+								if (_soundSource.reach() < distance) {
+                                    volume = 0;
+                                }
+								else if (distance < _soundSource.radius()) {
+                                    volume = 1;
+                                }
+								else { // inbetween
 									volume = 1 - _quadraticProgression(
 											_soundSource.radius(),
 											_soundSource.reach(),

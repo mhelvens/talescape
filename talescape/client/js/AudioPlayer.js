@@ -38,8 +38,8 @@ define(function () { ///////////////////////////////////////////////////////////
 
 		this.play = function () {
 			if (this.paused()) {
+                _refreshVolume();
 				_audioElement.play();
-				_refreshVolume();
 				_audioElement.loop = false;
 			}
 		};
@@ -93,7 +93,7 @@ define(function () { ///////////////////////////////////////////////////////////
 
 		function _refreshVolume() {
 			_audioElement.volume = _volume;
-			_audioElement.load();
+			//_audioElement.load();
 		}
 
 	};
