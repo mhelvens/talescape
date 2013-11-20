@@ -7,6 +7,8 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 	////// Constants //////
 	//////           //////
 
+	var ANIMATE = false;
+
 	var ANI_FIRST_STATE = 27; // frames
 	var ANI_HALT_STATE = 23; // frames
 	var ANI_END_STATE = 30; // frames
@@ -15,9 +17,8 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 	var ANI_CIRCLE_MAX_WIDTH = 4;  // meters
 	var ANI_WAVE_SPEED = 7;  // factor
 
-	var PATH_STEP_LENGTH = 1/*m*/;
-	var PATH_STEP_TIME = 200/*ms*/;
-
+	var PATH_STEP_LENGTH = 3/*m*/;
+	var PATH_STEP_TIME = 150/*ms*/;
 
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	return function (_map, _lat, _lng, _radius, _reach, _encodedPath) { ////////////////////////////////////////////////
@@ -55,9 +56,11 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 		this.start = function () {
 			if (!_playing) {
 				_playing = true;
-				_state = ANI_FIRST_STATE - 1;
-				_takeAnimationStep();
-				_timer = setInterval(_takeAnimationStep, ANI_TIMER_PERIOD);
+				if (ANIMATE) {
+					_state = ANI_FIRST_STATE - 1;
+					_takeAnimationStep();
+					_timer = setInterval(_takeAnimationStep, ANI_TIMER_PERIOD);
+				}
 				_mainCircle.setOptions({ fillColor: 'red', strokeColor: 'red' });
 			}
 		};
@@ -66,9 +69,11 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 			if (_playing) {
 				_playing = false;
 				_mainCircle.setOptions({ fillColor: 'green', strokeColor: 'green' });
-				clearInterval(_timer);
-				_aniCircle1.setOptions({ visible: false });
-				_aniCircle2.setOptions({ visible: false });
+				if (ANIMATE) {
+					clearInterval(_timer);
+					_aniCircle1.setOptions({ visible: false });
+					_aniCircle2.setOptions({ visible: false });
+				}
 			}
 		};
 
@@ -151,9 +156,12 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 			});
 
 			_mainCircle = new google.maps.Circle(mainCircleOptions);
-			_aniCircle1 = new google.maps.Circle(aniCircleOptions);
-			_aniCircle2 = new google.maps.Circle(aniCircleOptions);
 			_reachCircle = new google.maps.Circle(reachCircleOptions);
+
+			if (ANIMATE) {
+				_aniCircle1 = new google.maps.Circle(aniCircleOptions);
+				_aniCircle2 = new google.maps.Circle(aniCircleOptions);
+			}
 		})();
 
 
@@ -185,7 +193,9 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 		//// Set up Movement along Path
 		//
 		var _currentPathStep = 0;
+		var _startTime = Date.now();
 		window.setInterval(function () {
+			//_currentPathStep = (Date.now() - _startTime) % PATH_STEP_TIME;
 			_currentPathStep = (_currentPathStep + 1) % _pathSteps.length;
 			_mainCircle.setCenter(_pos());
 			_reachCircle.setCenter(_pos());
@@ -195,11 +205,12 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 
 		//// Listen for zoom-level change
 		//
-		google.maps.event.addListener(_map, 'zoom_changed', function () {
-			//noinspection ReuseOfLocalVariableJS
-			_currentZoom = _map.getZoom();
-		});
-
+		if (ANIMATE) {
+			google.maps.event.addListener(_map, 'zoom_changed', function () {
+				//noinspection ReuseOfLocalVariableJS
+				_currentZoom = _map.getZoom();
+			});
+		}
 
 		/////////////////////////////
 		////// Private methods //////
@@ -222,31 +233,33 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 		}
 
 		function _takeAnimationStep() {
-			_incrementAnimationState();
+			if (ANIMATE) {
+				_incrementAnimationState();
 
-			var state1 = _animationState(0);
-			if (state1 == ANI_FIRST_STATE) {
+				var state1 = _animationState(0);
+				if (state1 == ANI_FIRST_STATE) {
+					_aniCircle1.setOptions({
+						center: _pos()
+					});
+				}
 				_aniCircle1.setOptions({
-					center: _pos()
+					radius      : _radius + _zoomScale() * state1 * ANI_WAVE_SPEED,
+					strokeWeight: (ANI_CIRCLE_MAX_WIDTH - state1 * ANI_CIRCLE_MAX_WIDTH / ANI_HALT_STATE),
+					visible     : (state1 < ANI_HALT_STATE)
 				});
-			}
-			_aniCircle1.setOptions({
-				radius      : _radius + _zoomScale() * state1 * ANI_WAVE_SPEED,
-				strokeWeight: (ANI_CIRCLE_MAX_WIDTH - state1 * ANI_CIRCLE_MAX_WIDTH / ANI_HALT_STATE),
-				visible     : (state1 < ANI_HALT_STATE)
-			});
 
-			var state2 = _animationState(ANI_SECOND_WAVE_DELAY);
-			if (state2 == ANI_FIRST_STATE) {
+				var state2 = _animationState(ANI_SECOND_WAVE_DELAY);
+				if (state2 == ANI_FIRST_STATE) {
+					_aniCircle2.setOptions({
+						center: _pos()
+					});
+				}
 				_aniCircle2.setOptions({
-					center: _pos()
+					radius      : _radius + _zoomScale() * state2 * ANI_WAVE_SPEED,
+					strokeWeight: (ANI_CIRCLE_MAX_WIDTH - state2 * ANI_CIRCLE_MAX_WIDTH / ANI_HALT_STATE),
+					visible     : (state2 < ANI_HALT_STATE)
 				});
 			}
-			_aniCircle2.setOptions({
-				radius      : _radius + _zoomScale() * state2 * ANI_WAVE_SPEED,
-				strokeWeight: (ANI_CIRCLE_MAX_WIDTH - state2 * ANI_CIRCLE_MAX_WIDTH / ANI_HALT_STATE),
-				visible     : (state2 < ANI_HALT_STATE)
-			});
 		}
 
 

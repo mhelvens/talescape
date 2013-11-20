@@ -403,7 +403,7 @@ define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($
 
 						//// Continuously adjust volume
 						//
-						_adaptVolume(controller.userPos());
+						_adaptVolume();
 						controller.onNewUserPos(_adaptVolume);
 						_soundSource.onNewPos(_adaptVolume);
 
@@ -418,7 +418,7 @@ define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($
 								_playing = true;
 								_audio.loop();
 								_soundSource.start();
-								_adaptVolume(controller.userPos());
+								_adaptVolume();
 							}
 						}
 
@@ -454,12 +454,8 @@ define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($
 										controller.userPos().latLng
 								);
 
-								if (distance > _soundSource.reach()) {
-									volume = 0;
-								}
-								else if (distance < _soundSource.radius()) {
-									volume = 1;
-								}
+								if (distance > _soundSource.reach()) { volume = 0; }
+								else if (distance < _soundSource.radius()) { volume = 1; }
 								else {
 									volume = 1 - _quadraticProgression(
 											_soundSource.radius(),

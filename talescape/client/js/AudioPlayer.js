@@ -14,6 +14,8 @@ define(function () { ///////////////////////////////////////////////////////////
 
 		var _volume = 0;
 
+		_refreshVolume();
+
 		// TODO: find out if we need to store volume locally, or if _audioElement.volume stays valid when paused
 
 
@@ -79,7 +81,10 @@ define(function () { ///////////////////////////////////////////////////////////
 
 		this.volume = function () { return _volume; };
 
-		this.setVolume = function (newVol) { _audioElement.volume = _volume = newVol; };
+		this.setVolume = function (newVol) {
+			_volume = newVol;
+			_refreshVolume();
+		};
 
 
 		/////////////////////////////
@@ -88,6 +93,7 @@ define(function () { ///////////////////////////////////////////////////////////
 
 		function _refreshVolume() {
 			_audioElement.volume = _volume;
+			_audioElement.load();
 		}
 
 	};
