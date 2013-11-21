@@ -93,11 +93,13 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 			_newPosCallbacks.add(handler);
 		};
 
+
 		///////////////////////////////
 		////// Private variables //////
 		//////                   //////
 
-        var _staticPos;
+
+		var _staticPos;
 
 		var _mainCircle;
 		var _aniCircle1;
@@ -217,11 +219,13 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 			});
 		}
 
+
 		/////////////////////////////
 		////// Private methods //////
 		//////                 //////
 
-        function _pos() {
+
+		function _pos() {
             return _encodedPath ? _pathSteps[_currentPathStep] : _staticPos;
         }
 

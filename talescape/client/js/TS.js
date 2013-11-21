@@ -1,7 +1,7 @@
 'use strict';
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($, angular, SoundSource, AudioPlayer) {//
+define(['jquery', 'angular', 'geo', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($, angular, geo, SoundSource, AudioPlayer) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -42,7 +42,7 @@ define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($
                 };
 
 				this.userPos = function () {
-					return _userPos || undefined;
+					return _userPos;
 				};
 
 				this.map = function () {
@@ -89,18 +89,33 @@ define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($
 
 				//// Listen to user location
 				//
-				$.webshims.ready('geolocation', function () {
-					navigator.geolocation.watchPosition(_onNewUserPosition, function (error) {
-						console.error(error.message);
-					}, { enableHighAccuracy: true, maximumAge: 500});
-				});
+				geo.watchPosition(_onNewUserPosition, function (error) {
+					console.error(error.message);
+				}, { enableHighAccuracy: true, maximumAge: 500});
 
 
-                //// Listen to map click
-                //
+				//// Listen to map click for global start of sound sources
+				//
                 google.maps.event.addListener(_map, 'click', function () {
                     _globalStartCallbacks.fire();
                 });
+
+
+				//// Listen to map right-click for fake user position
+				//
+				var _usingRealGeo = true;
+				google.maps.event.addListener(_map, 'rightclick', function (mouseEvent) {
+					if (_usingRealGeo) {
+						_usingRealGeo = !_usingRealGeo;
+						_locationMarkerAccuracyCircle.setVisible(false);
+						_locationMarker.setIcon({
+							url   : 'img/fakemarker.png',
+							size  : new google.maps.Size(40, 40),
+							anchor: new google.maps.Point(20, 20)
+						});
+					}
+					geo.useFakeGeo(mouseEvent.latLng.lat(), mouseEvent.latLng.lng());
+				});
 
 
 				/////////////////////////////
@@ -150,9 +165,8 @@ define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($
 							clickable: false,
 							position : userPos.latLng,
 							icon     : {
-								url   : '//maps.gstatic.com/mapfiles/mobile/mobileimgs2.png',
+								url: 'img/marker.png',
 								size  : new google.maps.Size(22, 22),
-								origin: new google.maps.Point(0, 18),
 								anchor: new google.maps.Point(11, 11)
 							}
 						});
@@ -171,6 +185,7 @@ define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($
 					}
 
 					_locationMarker.setPosition(userPos.latLng);
+
 					_locationMarkerAccuracyCircle.setCenter(userPos.latLng);
 
 					//// parseFloat is used below for testing purposes only;
@@ -424,8 +439,8 @@ define(['jquery', 'angular', 'SoundSource', 'AudioPlayer', 'gmaps'], function ($
                         var globalStartDone = false;
                         controller.onGlobalStart(function () {
                             if (!globalStartDone) {
-                                globalStartDone = true;
-                                _start();
+	                            globalStartDone = !globalStartDone;
+	                            _start();
                                 _audio.setVolume(0); // TODO: Figure out why this is necessary for mobile!
                             }
                         });
