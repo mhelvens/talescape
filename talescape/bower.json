@@ -1,0 +1,27 @@
+{
+	"name"        : "talescape",
+	"version"     : "0.1.0",
+	"homepage"    : "https://github.com/mhelvens/talescape-cwi",
+	"authors"     : [
+		"Michiel Helvensteijn <mhelvens@gmail.com>"
+	],
+	"description" : "API for Talescape, the locative media platform",
+	"license"     : "MIT",
+	"private"     : true,
+	"ignore"      : [
+		"**/.*",
+		"node_modules",
+		"bower_components",
+		"test",
+		"tests"
+	],
+	"dependencies": {
+		"angular"           : "~1.0.8",
+		"jquery"            : "~2.0.3",
+		"modernizr"         : "~2.6.2",
+		"requirejs-domready": "~2.0.1",
+		"requirejs-plugins" : "~1.0.2",
+		"requirejs"         : "~2.1.8",
+		"webshim"           : "~1.11.1"
+	}
+}

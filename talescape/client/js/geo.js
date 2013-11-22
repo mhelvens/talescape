@@ -19,20 +19,30 @@ define(['jquery'], function ($) { //////////////////////////////////////////////
 
 	var _fakePosition = null;
 
-	var _fakeWatchers = [];
+	var _watchers = [];
 
-	function _notifyFakeWatchers() {
+	function _notifyWatchers() {
 		var i;
-		if (_fakePosition) {
-			for (i = 0; i < _geoWatchIdCount; ++i) {
-				if (_fakeWatchers[i]) {
-					_fakeWatchers[i].successCallback(_fakePosition);
+		if (_geoType == REAL_GEO) {
+			if (_lastRealPosition) {
+				for (i = 0; i < _geoWatchIdCount; ++i) {
+					if (_watchers[i]) {
+						_watchers[i].successCallback(_lastRealPosition);
+					}
 				}
 			}
 		} else {
-			for (i = 0; i < _geoWatchIdCount; ++i) {
-				if (_fakeWatchers[i]) {
-					_fakeWatchers[i].errorCallback(FAKE_POSITION_ERROR);
+			if (_fakePosition) {
+				for (i = 0; i < _geoWatchIdCount; ++i) {
+					if (_watchers[i]) {
+						_watchers[i].successCallback(_fakePosition);
+					}
+				}
+			} else {
+				for (i = 0; i < _geoWatchIdCount; ++i) {
+					if (_watchers[i]) {
+						_watchers[i].errorCallback(FAKE_POSITION_ERROR);
+					}
 				}
 			}
 		}
@@ -55,7 +65,10 @@ define(['jquery'], function ($) { //////////////////////////////////////////////
 	result.getCurrentPosition = function (successCallback, errorCallback, options) {
 		if (_geoType == REAL_GEO) {
 			$.webshims.ready('geolocation', function () {
-				navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
+				navigator.geolocation.getCurrentPosition(function (position) {
+					_lastRealPosition = position;
+					successCallback(position);
+				}, errorCallback, options);
 			});
 		} else if (_geoType == FAKE_GEO) {
 
@@ -68,17 +81,22 @@ define(['jquery'], function ($) { //////////////////////////////////////////////
 	var _geoWatchIdCount = 0;
 	var _geoWatchIdToWatchId = [];
 
+	var _lastRealPosition;
+
 	result.watchPosition = function (successCallback, errorCallback, options) {
 		var id = _geoWatchIdCount++;
 
 		$.webshims.ready('geolocation', function () {
 			_geoWatchIdToWatchId[id] = navigator.geolocation.watchPosition(
-					function (position) { if (_geoType == REAL_GEO) { successCallback(position); } },
+					function (position) {
+						_lastRealPosition = position;
+						if (_geoType == REAL_GEO) { successCallback(position); }
+					},
 					function (positionError) { if (_geoType == REAL_GEO) { errorCallback(positionError); } },
 					options);
 		});
 
-		_fakeWatchers[id] = {
+		_watchers[id] = {
 			successCallback: successCallback,
 			errorCallback  : errorCallback
 		};
@@ -95,17 +113,24 @@ define(['jquery'], function ($) { //////////////////////////////////////////////
 		$.webshims.ready('geolocation', function () {
 			navigator.geolocation.clearWatch(_geoWatchIdToWatchId[geoWatchId]);
 		});
-		_fakeWatchers[geoWatchId] = null;
+		_watchers[geoWatchId] = null;
 	};
 
 	result.useRealGeo = function () {
 		_geoType = REAL_GEO;
+		if (_lastRealPosition) _notifyWatchers();
 	};
 
 	result.useFakeGeo = function (lat, lng) {
 		_geoType = FAKE_GEO;
-		if (lat) _fakePosition = _latLngToFakePosition(lat, lng);
-		if (_fakePosition) { _notifyFakeWatchers(); }
+		if (lat) { _fakePosition = _latLngToFakePosition(lat, lng); }
+		else if (_lastRealPosition) { _fakePosition = _lastRealPosition; }
+		if (_fakePosition) { _notifyWatchers(); }
+	};
+
+	result.toggleRealFakeGeo = function () {
+		if (result.usingRealGeo()) { result.useFakeGeo(); }
+		else { result.useRealGeo(); }
 	};
 
 	result.usingRealGeo = function () {
@@ -119,7 +144,12 @@ define(['jquery'], function ($) { //////////////////////////////////////////////
 	result.setFakePosition = function (lat, lng) {
 		//noinspection ReuseOfLocalVariableJS
 		_fakePosition = _latLngToFakePosition(lat, lng);
-		_notifyFakeWatchers();
+		_notifyWatchers();
+	};
+
+	result.lastKnownPosition = function () {
+		if (_geoType == REAL_GEO) { return _lastRealPosition; }
+		else { return _fakePosition; }
 	};
 
 

@@ -8,6 +8,7 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 	//////           //////
 
 	var ANIMATE = true;
+	var REACH_CIRCLE = false;
 
 	var ANI_FIRST_STATE = 27; // frames
 	var ANI_HALT_STATE = 23; // frames
@@ -17,8 +18,8 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 	var ANI_CIRCLE_MAX_WIDTH = 4;  // meters
 	var ANI_WAVE_SPEED = 7;  // factor
 
-	var PATH_STEP_LENGTH = 1/*m*/;
-	var PATH_STEP_TIME = 50/*ms*/;
+	var PATH_SPEED = 10/* m/s */;
+	var PATH_STEP_TIME = 50/* ms */;
 
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	return function (_map, _lat, _lng, _radius, _reach, _encodedPath) { ////////////////////////////////////////////////
@@ -57,9 +58,11 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 			if (!_playing) {
 				_playing = true;
 				if (ANIMATE) {
-					_state = ANI_FIRST_STATE - 1;
-					_takeAnimationStep();
-					_timer = setInterval(_takeAnimationStep, ANI_TIMER_PERIOD);
+					_aniState = ANI_FIRST_STATE;
+					_aniTimer = window.setInterval(_takeAnimationStep, ANI_TIMER_PERIOD);
+				}
+				if (_encodedPath) {
+					_pathTimer = window.setInterval(_takePathStep, PATH_STEP_TIME);
 				}
 				_mainCircle.setOptions({ fillColor: 'red', strokeColor: 'red' });
 			}
@@ -70,9 +73,12 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				_playing = false;
 				_mainCircle.setOptions({ fillColor: 'green', strokeColor: 'green' });
 				if (ANIMATE) {
-					clearInterval(_timer);
+					window.clearInterval(_aniTimer);
 					_aniCircle1.setOptions({ visible: false });
 					_aniCircle2.setOptions({ visible: false });
+				}
+				if (_encodedPath) {
+					window.clearInterval(_pathTimer);
 				}
 			}
 		};
@@ -104,10 +110,12 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 		var _mainCircle;
 		var _aniCircle1;
 		var _aniCircle2;
-		var _reachCircle;
+		if (REACH_CIRCLE) { var _reachCircle; }
 
-		var _timer;
-		var _state;
+		var _pathTimer;
+
+		var _aniTimer;
+		var _aniState;
 		var _playing = false;
 		var _currentZoom = _map.getZoom();
 
@@ -127,6 +135,7 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				draggable: false,
 				editable : false
 			};
+
 			var mainCircleOptions = $.extend({}, commonCircleOptions, {
 				clickable     : true,
 				fillColor     : 'green',
@@ -138,77 +147,92 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				zIndex        : 1,
 				visible       : true
 			});
-			var aniCircleOptions = $.extend({}, commonCircleOptions, {
-				clickable     : false,
-				fillOpacity   : 0,
-				strokeColor   : 'red',
-				strokeOpacity : 1,
-				strokeWeight  : 4,
-				strokePosition: google.maps.OUTSIDE,
-				zIndex        : 2,
-				visible       : false
-			});
-			var reachCircleOptions = $.extend({}, commonCircleOptions, {
-				clickable    : false,
-				fillOpacity  : 0,
-				strokeColor  : 'yellow',
-				strokeOpacity: 1,
-				strokeWeight : 1,
-				zIndex       : 3,
-				visible      : true,
-				radius       : _reach
-			});
 
 			_mainCircle = new google.maps.Circle(mainCircleOptions);
-			_reachCircle = new google.maps.Circle(reachCircleOptions);
 
 			if (ANIMATE) {
+				var aniCircleOptions = $.extend({}, commonCircleOptions, {
+					clickable     : false,
+					fillOpacity   : 0,
+					strokeColor   : 'red',
+					strokeOpacity : 1,
+					strokeWeight  : 4,
+					strokePosition: google.maps.OUTSIDE,
+					zIndex        : 2,
+					visible       : false
+				});
+
 				_aniCircle1 = new google.maps.Circle(aniCircleOptions);
 				_aniCircle2 = new google.maps.Circle(aniCircleOptions);
 			}
+
+			if (REACH_CIRCLE) {
+				var reachCircleOptions = $.extend({}, commonCircleOptions, {
+					clickable    : false,
+					fillOpacity  : 0,
+					strokeColor  : 'yellow',
+					strokeOpacity: 1,
+					strokeWeight : 1,
+					zIndex       : 3,
+					visible      : true,
+					radius       : _reach
+				});
+
+				_reachCircle = new google.maps.Circle(reachCircleOptions);
+			}
+
 		})();
 
 
-        if (!_encodedPath) {
-            _staticPos = new google.maps.LatLng(_lat, _lng);
-        } else {
-            var _path = google.maps.geometry.encoding.decodePath(_encodedPath);
+		if (!_encodedPath) {
+			_staticPos = new google.maps.LatLng(_lat, _lng);
+		} else {
+			var _path = google.maps.geometry.encoding.decodePath(_encodedPath);
+			var _segments = [];
 
-            //// Set up the Path Steps
-            //
-            var _pathSteps = [];
-            (function () {
-                var remainder = 0;
-                for (var segment = 1; segment < _path.length; ++segment) {
-                    var from = _path[segment - 1];
-                    var to = _path[segment];
+			//// Precompute the distance and heading of each path segment
+			//
+			for (var segment = 0; segment < _path.length; ++segment) {
+				var from = _path[segment];
+				var to = _path[(segment + 1) % _path.length];
 
-                    var distance = google.maps.geometry.spherical.computeDistanceBetween(from, to);
-                    var heading = google.maps.geometry.spherical.computeHeading(from, to);
+				_segments[segment] = {
+					distance: google.maps.geometry.spherical.computeDistanceBetween(from, to),
+					heading : google.maps.geometry.spherical.computeHeading(from, to)
+				};
+			}
 
-                    for (var i = 0; remainder + i * PATH_STEP_LENGTH < distance; ++i) {
-                        _pathSteps.push(google.maps.geometry.spherical.computeOffset(
-                            from,
-                            remainder + i * PATH_STEP_LENGTH,
-                            heading));
-                    }
+			//// Set up movement along the path
+			//
+			var _lastTime = Date.now();
+			var _segment = 0;
+			var _segmentProgress = 0;
+			var _dynamicPos = _path[_segment];
 
-                    remainder = remainder + i * PATH_STEP_LENGTH - distance;
-                }
-            })();
+			var _takePathStep = function () {
+				var thisTime = Date.now();
+				var distanceToGo = (thisTime - _lastTime) / 1000 * PATH_SPEED;
+				while (distanceToGo > 0) {
+					if (_segmentProgress + distanceToGo > _segments[_segment].distance) {
+						distanceToGo -= (_segments[_segment].distance - _segmentProgress);
+						_segmentProgress = 0;
+						_segment = (_segment + 1) % _path.length;
+					} else {
+						_segmentProgress += distanceToGo;
+						_dynamicPos = google.maps.geometry.spherical.computeOffset(
+								_path[_segment], _segmentProgress, _segments[_segment].heading);
+						distanceToGo = 0;
+					}
+				}
+				//noinspection ReuseOfLocalVariableJS
+				_lastTime = thisTime;
 
-            //// Set up Movement along Path
-            //
-            var _currentPathStep = 0;
-//            var _startTime = Date.now();
-            window.setInterval(function () {
-                //_currentPathStep = (Date.now() - _startTime) % PATH_STEP_TIME;
-                _currentPathStep = (_currentPathStep + 1) % _pathSteps.length;
-                _mainCircle.setCenter(_pos());
-                _reachCircle.setCenter(_pos());
-                _newPosCallbacks.fire(_pos());
-            }, PATH_STEP_TIME);
-        }
+				_mainCircle.setCenter(_pos());
+				if (REACH_CIRCLE) { _reachCircle.setCenter(_pos()); }
+
+				_newPosCallbacks.fire(_pos());
+			};
+		}
 
 		//// Listen for zoom-level change
 		//
@@ -226,23 +250,24 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 
 
 		function _pos() {
-            return _encodedPath ? _pathSteps[_currentPathStep] : _staticPos;
-        }
+//			return _encodedPath ? _pathSteps[_currentPathStep] : _staticPos;
+			return _encodedPath ? _dynamicPos : _staticPos;
+		}
 
 		function _animationState(delay) {
-			return (_state + delay) % ANI_END_STATE;
+			return (_aniState + delay) % ANI_END_STATE;
 		}
 
 		function _incrementAnimationState() {
-			_state = _animationState(1);
+			_aniState = _animationState(1);
 		}
 
 		function _zoomScale() {
 			return Math.pow(2, 15 - _currentZoom);
 		}
 
-		function _takeAnimationStep() {
-			if (ANIMATE) {
+		if (ANIMATE) {
+			function _takeAnimationStep() {
 				_incrementAnimationState();
 
 				var state1 = _animationState(0);

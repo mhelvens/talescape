@@ -1,0 +1,19 @@
+<div class="ts-controls" title="Of all {{ count }} sources, {{running}} are currently running.">
+	<div>
+		<div class="button" draggable="false" ng-click="runOrPauseAll()">
+			<span>
+				<div ng-class="{
+					'button': true,
+					'no-sources': running == 0,
+					'some-sources': 0 < running && running < count,
+					'all-sources': running == count
+				}"></div>
+			</span>
+		</div>
+	</div>
+	<div>
+		<div class="text" draggable="false">
+			<span><div class="text">{{running}} / {{count}}</div></span>
+		</div>
+	</div>
+</div>
