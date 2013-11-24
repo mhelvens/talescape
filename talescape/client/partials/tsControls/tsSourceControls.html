@@ -1,14 +1,8 @@
-<div class="ts-controls" title="Of all {{ count }} sources, {{running}} are currently running.">
+<div class="ts-controls"
+     title="Of all {{count}} sources, {{running || 'none'}} {{running==1 && 'is' || 'are'}} currently running.">
 	<div>
 		<div class="button" draggable="false" ng-click="runOrPauseAll()">
-			<span>
-				<div ng-class="{
-					'button': true,
-					'no-sources': running == 0,
-					'some-sources': 0 < running && running < count,
-					'all-sources': running == count
-				}"></div>
-			</span>
+			<span><img ng-src="{{icons[vagueCount()]}}"></span>
 		</div>
 	</div>
 	<div>

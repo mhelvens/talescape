@@ -7,9 +7,7 @@ define(['angular'], function (angular) {
 
 	var TS = angular.module('TS', []);
 
-	TS.controller('ApplicationController', ['$scope', function ($scope) {
-		$scope.title = 'Talescape';
-	}]);
+	TS.controller('ApplicationController', function () {});
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

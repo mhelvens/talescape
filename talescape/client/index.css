@@ -1,75 +1,78 @@
 html, body {
-  height: 100%;
-  min-height: 100%;
-  padding: 0px;
-  margin: 0px;
-  border: 0px; }
+	height     : 100%;
+	min-height : 100%;
+	padding    : 0px;
+	margin     : 0px;
+	border     : 0px; }
 
 [hidden] {
-  display: none; }
+	display : none; }
 
 .ts-map,
 .ts-map .canvas {
-  height: 100%;
-  min-height: 100%;
-  padding: 0px;
-  margin: 0px;
-  border: 0px; }
+	height     : 100%;
+	min-height : 100%;
+	padding    : 0px;
+	margin     : 0px;
+	border     : 0px; }
 
 .ts-controls {
-  margin: 5px;
-  text-align: center;
-  cursor: default; }
-  .ts-controls > div {
-    float: left;
-    line-height: 0; }
-    .ts-controls > div > div {
-      direction: ltr;
-      overflow: hidden;
-      position: relative;
-      -webkit-user-select: none;
-      background-color: white;
-      padding: 4px;
-      -webkit-background-clip: padding-box;
-      background-clip: padding-box;
-      border-top: solid 1px rgba(0, 0, 0, 0.14902);
-      border-bottom: solid 1px rgba(0, 0, 0, 0.14902);
-      border-right: solid 1px rgba(0, 0, 0, 0.14902);
-      -webkit-box-shadow: rgba(0, 0, 0, 0.29804) 0px 1px 4px -1px;
-      box-shadow: rgba(0, 0, 0, 0.29804) 0px 1px 4px -1px; }
-      .ts-controls > div > div.button:hover {
-        background-color: #ebebeb; }
-      .ts-controls > div > div > span {
-        display: inline-block; }
-        .ts-controls > div > div > span > div {
-          height: 16px;
-          padding: 0;
-          overflow: hidden;
-          position: relative;
-          margin: 0; }
-          .ts-controls > div > div > span > div.button {
-            width: 16px;
-            padding: 0; }
-            .ts-controls > div > div > span > div.button.no-sources {
-              background-image: url(img/runall.png); }
-            .ts-controls > div > div > span > div.button.some-sources {
-              background-image: url(img/pausesome.png); }
-            .ts-controls > div > div > span > div.button.all-sources {
-              background-image: url(img/pauseall.png); }
-          .ts-controls > div > div > span > div.text {
-            color: black;
-            font-family: Roboto, Arial, sans-serif;
-            text-align: left;
-            font-size: 11px;
-            font-weight: bold;
-            line-height: 16px;
-            padding: 0px 4px; }
-    .ts-controls > div:first-child > div {
-      border-top-left-radius: 2px;
-      border-bottom-left-radius: 2px;
-      border-left: solid 1px rgba(0, 0, 0, 0.14902); }
-    .ts-controls > div:not(:first-child) > div {
-      border-left: none; }
-    .ts-controls > div:last-child > div {
-      border-top-right-radius: 2px;
-      border-bottom-right-radius: 2px; }
+	margin     : 5px;
+	text-align : center;
+	cursor     : default; }
+
+.ts-controls > div {
+	float       : left;
+	line-height : 0; }
+
+.ts-controls > div > div {
+	direction               : ltr;
+	overflow                : hidden;
+	position                : relative;
+	-webkit-user-select     : none;
+	background-color        : white;
+	padding                 : 4px;
+	-webkit-background-clip : padding-box;
+	background-clip         : padding-box;
+	border-top              : solid 1px rgba(0, 0, 0, 0.14902);
+	border-bottom           : solid 1px rgba(0, 0, 0, 0.14902);
+	border-right            : solid 1px rgba(0, 0, 0, 0.14902);
+	-webkit-box-shadow      : rgba(0, 0, 0, 0.29804) 0px 1px 4px -1px;
+	box-shadow              : rgba(0, 0, 0, 0.29804) 0px 1px 4px -1px; }
+
+.ts-controls > div > div.button:hover {
+	background-color : #ebebeb; }
+
+.ts-controls > div > div > span {
+	display : inline-block; }
+
+.ts-controls > div > div > span > * {
+	height   : 16px;
+	padding  : 0;
+	overflow : hidden;
+	position : relative;
+	margin   : 0; }
+
+.ts-controls > div > div > span > img {
+	width : 16px; }
+
+.ts-controls > div > div > span > div {
+	color       : black;
+	font-family : Roboto, Arial, sans-serif;
+	text-align  : left;
+	font-size   : 11px;
+	font-weight : bold;
+	line-height : 16px;
+	padding     : 0px 4px; }
+
+.ts-controls > div:first-child > div {
+	border-top-left-radius    : 2px;
+	border-bottom-left-radius : 2px;
+	border-left               : solid 1px rgba(0, 0, 0, 0.14902); }
+
+.ts-controls > div:not(:first-child) > div {
+	border-left : none; }
+
+.ts-controls > div:last-child > div {
+	border-top-right-radius    : 2px;
+	border-bottom-right-radius : 2px; }

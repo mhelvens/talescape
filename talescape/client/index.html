@@ -1,35 +1,39 @@
 <!doctype html>
 <html ng-controller="ApplicationController">
-	<head>
-		<meta charset="utf-8" />
-		<title ng-bind="title"></title>
-		<link rel="stylesheet" href="index.css">
-		<meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
-		<script data-main="js/main.js" src="js/lib/requirejs/require.js"></script>
-	</head>
-	<body>
-	<ts-map zoom="18" lat="52.3567841" lng="4.9520856">
-		<!--<ts-area lat="52.35538852290322"
-		         lng="4.952993988990784"
-		         radius="15"
-		         reach="60"
-		         path="etp~Hekf]uEiJxDaGjC~Ku@tA"
-		         audio="audio/tail toddle.mp3"
-		         loudness="1"></ts-area>
-		<ts-area lat="52.35696443453904" lng="4.9532246589660645"
-		         radius="15"
-		         reach="60"
-		         path="_~p~Hslf]xIcMkGd@|EpNkHsA"
-		         audio="audio/saewill.mp3"
-		         loudness=".4"></ts-area> -->
+<head>
+	<meta charset="utf-8"/>
+	<title>Talescape</title>
+	<link rel="stylesheet" href="index.css">
+	<meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
+	<script data-main="js/main.js" src="js/lib/requirejs/require.js"></script>
+</head>
+<body>
+<ts-map zoom="18" lat="52.3567841" lng="4.9520856">
+	<ts-source-controls></ts-source-controls>
+	<ts-user-pos-controls></ts-user-pos-controls>
 
-		<ts-source-controls></ts-source-controls>
-
-		<ts-area lat="52.360725426881345" lng="4.943482875823975" radius="7.302739328331644" reach="37.30273932833165"
-		         audio="/audio/damsquare/Zinken_emmers_neerzetten_op_straat_en_oppakken_1034.wav"
-		         loudness="1"></ts-area>
-		<ts-area lat="52.360633699169234" lng="4.942882061004639" radius="6.938550971862784" reach="36.93855097186278" audio="audio/cairnomount.mp3" loudness="1"></ts-area>
-        <ts-area lat="52.361436310193675" lng="4.943241477012634" radius="7" reach="30" path="_zq~Hgnd]UyCxDeAV~C{D~@" audio="audio/tail toddle.mp3" loudness=".5"></ts-area>
-	</ts-map>
-	</body>
+	<ts-area lat="52.360725426881345"
+	         lng="4.943482875823975"
+	         radius="7.302739328331644"
+	         reach="37.30273932833165"
+	         loudness="1">
+		<source src="/audio/damsquare/Zinken_emmers_neerzetten_op_straat_en_oppakken_1034.wav" type="audio/wav">
+	</ts-area>
+	<ts-area lat="52.360633699169234"
+	         lng="4.942882061004639"
+	         radius="6.938550971862784"
+	         reach="36.93855097186278"
+	         loudness="1">
+		<source src="audio/cairnomount.mp3" type="audio/mp3">
+	</ts-area>
+	<ts-area lat="52.361436310193675"
+	         lng="4.943241477012634"
+	         radius="7"
+	         reach="30"
+	         path="_zq~Hgnd]UyCxDeAV~C{D~@"
+	         loudness=".5">
+		<source src="audio/tail toddle.mp3" type="audio/mp3">
+	</ts-area>
+</ts-map>
+</body>
 </html>

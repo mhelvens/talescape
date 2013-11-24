@@ -89,13 +89,37 @@ define(['gmaps'], function (gmaps) {
 				radius: radiusCircle,
 				reach : new gmaps.Circle($.extend({
 					center: radiusCircle.getCenter(),
-					radius: radiusCircle.getRadius() + 30 * Math.pow(2, 18 - _map.getZoom())
+					radius: radiusCircle.getRadius()
 				}, editableReachOptions))
 			};
 
-			_prepareEditableSource(newSource);
-
 			_drawingManager.setDrawingMode(null);
+
+
+			_map.setOptions({ draggableCursor: 'crosshair' });
+
+			var _resizeReachListener = gmaps.event.addListener(_map, 'mousemove', function (mouseEvent) {
+				var distance = gmaps.geometry.spherical.computeDistanceBetween(newSource.radius.getCenter(), mouseEvent.latLng);
+				if (distance > newSource.reach.getRadius() || distance > newSource.radius.getRadius() + 5) {
+					newSource.reach.setRadius(distance);
+				}
+			});
+
+			gmaps.event.addListenerOnce(_map, 'click', function (mouseEvent) {
+				var distance = gmaps.geometry.spherical.computeDistanceBetween(newSource.radius.getCenter(), mouseEvent.latLng);
+				mouseEvent.stop();
+				//noinspection JSValidateTypes
+				gmaps.event.removeListener(_resizeReachListener);
+				newSource.reach.setRadius(Math.max(distance, newSource.radius.getRadius() + 5));
+				_map.setOptions({ draggableCursor: null});
+				_prepareEditableSource(newSource);
+			});
+
+//			gmaps.event.trigger(radiusCircle, 'mousemove', {
+//				stop: null,
+//				latLng: radiusCircle.getCenter()
+//			});
+
 
 			_logNewSourceInfo();
 		});
@@ -174,14 +198,12 @@ define(['gmaps'], function (gmaps) {
 				console.debug("----------------------------------------");
 				_newSources.map(function (s) {
 					//noinspection JSValidateTypes
-					console.debug('<ts-area lat="{{1}}" lng="{{2}}" radius="{{3}}" reach="{{4}}"{{5}} audio=""></ts-area>'
+					console.debug('<ts-area lat="{{1}}" lng="{{2}}" radius="{{3}}" reach="{{4}}" path="{{5}}" loudness="1" audio=""></ts-area>'
 							.format(s.radius.getCenter().lat(),
 									s.radius.getCenter().lng(),
 									s.radius.getRadius(),
 									s.reach.getRadius(),
-									!s.path ? "" :
-									' path="' + gmaps.geometry.encoding.encodePath(s.path.getPath())
-											.replace(/(\\|")/g, '\\$1') + '"'));
+									s.path ? gmaps.geometry.encoding.encodePath(s.path.getPath()).replace(/(\\|")/g, '\\$1') : ""));
 				});
 				console.debug("----------------------------------------");
 			}

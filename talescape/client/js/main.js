@@ -22,7 +22,8 @@ require.config({
 var ANGULAR_TALESCAPE_MODULES = [
 	'ts-map',
 	'ts-area',
-	'ts-source-controls'
+	'ts-source-controls',
+	'ts-user-pos-controls'
 ];
 
 //// Load javascript patches before anything else
