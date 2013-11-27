@@ -19,11 +19,13 @@ require.config({
 
 //// The Angular Talescape Modules to Load
 //
-var ANGULAR_TALESCAPE_MODULES = [
+var TALESCAPE_ANGULAR_DIRECTIVES = [
 	'ts-map',
+	'ts-scenario',
 	'ts-area',
 	'ts-source-controls',
-	'ts-user-pos-controls'
+	'ts-user-pos-controls',
+	'ts-source-editor'
 ];
 
 //// Load javascript patches before anything else
@@ -52,7 +54,7 @@ requirejs(['patches'], function () {
 
 	//// Bootstrap Angular
 	//
-	requirejs(['angular', 'domReady!', 'ts-map'].concat(ANGULAR_TALESCAPE_MODULES), function (angular) {
+	requirejs(['angular', 'domReady!', 'ts-map'].concat(TALESCAPE_ANGULAR_DIRECTIVES), function (angular) {
 
 		console.info('Bootstrapping Angular...');
 

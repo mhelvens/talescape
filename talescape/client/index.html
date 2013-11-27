@@ -1,4 +1,5 @@
 <!doctype html>
+<!--suppress HtmlUnknownTarget -->
 <html ng-controller="ApplicationController">
 <head>
 	<meta charset="utf-8"/>
@@ -9,30 +10,41 @@
 </head>
 <body>
 <ts-map zoom="18" lat="52.3567841" lng="4.9520856">
+	<ts-source-editor></ts-source-editor>
 	<ts-source-controls></ts-source-controls>
 	<ts-user-pos-controls></ts-user-pos-controls>
 
-	<ts-area lat="52.360725426881345"
-	         lng="4.943482875823975"
-	         radius="7.302739328331644"
-	         reach="37.30273932833165"
-	         loudness="1">
-		<source src="/audio/damsquare/Zinken_emmers_neerzetten_op_straat_en_oppakken_1034.wav" type="audio/wav">
-	</ts-area>
-	<ts-area lat="52.360633699169234"
-	         lng="4.942882061004639"
-	         radius="6.938550971862784"
-	         reach="36.93855097186278"
-	         loudness="1">
-		<source src="audio/cairnomount.mp3" type="audio/mp3">
-	</ts-area>
-	<ts-area lat="52.361436310193675"
-	         lng="4.943241477012634"
-	         radius="7"
-	         reach="30"
-	         path="_zq~Hgnd]UyCxDeAV~C{D~@"
+	<ts-area lat="52.35770158804998"
+	         lng="4.955488443374634"
+	         radius="20"
+	         reach="100"
+	         path="sbq~Hyzf]_Azp@Jk@JYLCVBDDnBzDfP}ZwPo\\Wg@QIKNi@jACjA"
 	         loudness=".5">
-		<source src="audio/tail toddle.mp3" type="audio/mp3">
+		<source src="audio/tail toddle.mp3">
+	</ts-area>
+	<ts-area lat="52.35698081586175"
+	         lng="4.953718185424805"
+	         radius="20"
+	         reach="60"
+	         loudness="1">
+		<source src="audio/cairnomount.mp3">
+	</ts-area>
+	<ts-area scenario="Test Scenario 1"
+	         lat="52.35597171504828"
+	         lng="4.949694871902466"
+	         radius="5"
+	         reach="30"
+	         path="ywp~Hqve]{@eBz@dB"
+	         loudness="1">
+		<source src="audio/girlwho.mp3">
+	</ts-area>
+	<ts-area scenario="Test Scenario 1"
+	         lat="52.357183943759026"
+	         lng="4.947828054428101"
+	         radius="20"
+	         reach="70"
+	         loudness="1">
+		<source src="audio/saewill.mp3">
 	</ts-area>
 </ts-map>
 </body>

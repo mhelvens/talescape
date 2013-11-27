@@ -15,34 +15,58 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular) {
 
 		return {
 			restrict   : 'E',
-			templateUrl: 'partials/tsControls/tsSourceControls.html',
+			templateUrl: 'partials/tsControls/ts-source-controls.html',
 			replace    : true,
 			require    : '^tsMap',
-			scope: {},
+			scope      : {},
 
 			link: function (scope, element, attrs, controller) {
+
 
 				scope.icons = {};
 				scope.icons[NO_SOURCES] = 'img/run-all.png';
 				scope.icons[SOME_SOURCES] = 'img/pause-some.png';
 				scope.icons[ALL_SOURCES] = 'img/pause-all.png';
 
-				scope.running = 0;
-				scope.count = 0;
+				scope.nextScenarioIcon = function () {
+					return ''; // TODO: create icon; or perhaps switch to a combobox and lose this button
+				}
+
+				scope.running = [];
+				scope.count = [];
 
 
-				///////////////////////////////
-				////// Gathering Sources //////
-				//////                   //////
+				/////////////////////////////////////////////
+				////// Gathering Scenarios and Sources //////
+				//////                                 //////
 
 
-				var sources = [];
+				var _sources = [];
+				var _scenarios = [];
+				var _currentScenario = 0;
 
-				controller.onSourceRegistered(function (source) {
-					sources.push(source);
-					++scope.count;
-					source.onRun(function () { ++scope.running; });
-					source.onPause(function () { --scope.running; });
+				// TODO: The below is temporary, as this module doesn't pick up the registration of "" by ts-map
+				_scenarios.push("");
+				_sources[""] = [];
+
+				scope.scenario = "";
+				scope.running[""] = 0;
+				scope.count[""] = 0;
+
+				controller.onScenarioRegistered(function (scenario) {
+					if (!_sources[scenario]) {
+						_scenarios.push(scenario);
+						_sources[scenario] = [];
+						scope.count[scenario] = 0;
+						scope.running[scenario] = 0;
+					}
+				});
+
+				controller.onSourceRegistered(function (source, scenario) {
+					_sources[scenario].push(source);
+					scope.count[scenario]++;
+					source.onRun(function () { scope.running[scenario]++; });
+					source.onPause(function () { scope.running[scenario]--; });
 				});
 
 
@@ -60,29 +84,33 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular) {
 
 
 				scope.vagueCount = function () {
-					if (scope.running == 0) { return NO_SOURCES; }
-					else if (scope.running < scope.count) { return SOME_SOURCES; }
+					if (scope.running[scope.scenario] == 0) { return NO_SOURCES; }
+					else if (scope.running[scope.scenario] < scope.count[scope.scenario]) { return SOME_SOURCES; }
 					else { return ALL_SOURCES; }
 				}
 
 				scope.runAll = function () {
-					sources.map(function (source) {
+					_sources[scope.scenario].map(function (source) {
 						source.run();
 					});
 				};
 
 
 				scope.pauseAll = function () {
-					sources.map(function (source) {
+					_sources[scope.scenario].map(function (source) {
 						source.pause();
 					});
 				};
 
 				scope.runOrPauseAll = function () {
-					if (scope.running == 0) { scope.runAll(); }
+					if (scope.running[scope.scenario] == 0) { scope.runAll(); }
 					else { scope.pauseAll(); }
 				};
 
+				scope.nextScenario = function () {
+					_currentScenario = (_currentScenario + 1) % _scenarios.length;
+					scope.scenario = _scenarios[_currentScenario];
+				};
 
 			}
 		};

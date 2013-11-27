@@ -11,7 +11,7 @@ define(['jquery', 'gmaps', 'angular', 'geo', 'TS', 'ts-map'], function ($, gmaps
 
 		return {
 			restrict   : 'E',
-			templateUrl: 'partials/tsControls/tsUserPosControls.html',
+			templateUrl: 'partials/tsControls/ts-user-pos-controls.html',
 			replace    : true,
 			require    : '^tsMap',
 			scope      : {},
@@ -25,31 +25,37 @@ define(['jquery', 'gmaps', 'angular', 'geo', 'TS', 'ts-map'], function ($, gmaps
 
 
 				var GEOMODE = [];
-				GEOMODE[geo.GEO_REAL] = [];
-				GEOMODE[geo.GEO_FAKE] = [];
 
+				GEOMODE[geo.GEO_REAL] = [];
 				GEOMODE[geo.GEO_REAL][geo.GEO_KNOWN] = {
 					icon : 'img/geomode-real.png',
 					title: 'Currently using real GPS coordinates.'
 				};
-
 				GEOMODE[geo.GEO_REAL][geo.GEO_UNKNOWN] = {
 					icon : 'img/geomode-real-unknown.png',
 					title: 'Currently trying to use real GPS coordinates, but your position is unknown.'
 				};
 
+				GEOMODE[geo.GEO_FAKE] = [];
 				GEOMODE[geo.GEO_FAKE][geo.GEO_KNOWN] = {
 					icon : 'img/geomode-fake.png',
 					title: 'Currently using manual GPS coordinates.'
 				};
-
 				GEOMODE[geo.GEO_FAKE][geo.GEO_UNKNOWN] = {
 					icon : 'img/geomode-fake-unknown.png',
 					title: 'Currently using manual GPS coordinates (your real position is unknown).'
 				};
 
+				scope.toggleGeoMode = function () {
+					geo.toggleMode();
 
-				scope.toggleGeoMode = geo.toggleMode;
+					//// Move a new fake location marker to the current center of the map
+					//
+					if (geo.mode() == geo.GEO_FAKE) {
+						var center = controller.map().getCenter();
+						geo.setFakePosition(center.lat(), center.lng());
+					}
+				};
 				scope.geoModeIcon = function () { return GEOMODE[geo.mode()][geo.known()].icon; };
 				scope.geoModeTitle = function () { return GEOMODE[geo.mode()][geo.known()].title; };
 
@@ -67,7 +73,6 @@ define(['jquery', 'gmaps', 'angular', 'geo', 'TS', 'ts-map'], function ($, gmaps
 				CENTERING_TITLES[controller.CENTERING_NOT] = 'Currently not auto-centering the map.';
 				CENTERING_TITLES[controller.CENTERING_USER] = 'Currently auto-centering the map on your position.';
 
-
 				scope.toggleCentering = controller.toggleCentering;
 				scope.centeringIcon = function () { return CENTERING_ICONS[controller.centering()]; };
 				scope.centeringTitle = function () { return CENTERING_TITLES[controller.centering()]; };
@@ -81,14 +86,16 @@ define(['jquery', 'gmaps', 'angular', 'geo', 'TS', 'ts-map'], function ($, gmaps
 				controller.map().controls[gmaps.ControlPosition.TOP_LEFT].push(element[0]);
 
 
-			}
-		};
+//          ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			}};/////////////////////////////////////////////////////////////////////////////////////////////////////////
+//          ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	}]);
+	}]);////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-});
+});/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
