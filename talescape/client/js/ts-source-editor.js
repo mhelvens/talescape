@@ -265,13 +265,14 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map'], function ($, gmaps, angul
 
 
 					function prepareForEdits() {
-						var index = _newSources.length - 1;
-						_newSources[index].radius.setOptions({ clickable: true });
+						newSource.radius.setOptions({ clickable: true });
+						newSource.audio = {};
 						gmaps.event.addListener(newSource.radius, 'dblclick', function (mouseEvent) {
 							mouseEvent.stop();
-							_newSources[index].file = prompt("Audio File", (_newSources[index].file || ""));
+							newSource.audio.src = prompt("Audio File", (newSource.audio.src || ""));
 						});
 					}
+
 
 					function cleanUpFinal() {
 						cleanUpIntermediate();
@@ -279,6 +280,7 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map'], function ($, gmaps, angul
 						_drawingManager.setDrawingMode(null);
 						controller.map().setOptions({ draggableCursor: null });
 					}
+
 
 					function cleanUpIntermediate() {
 						listeners.map(function (listener) {
@@ -312,68 +314,6 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map'], function ($, gmaps, angul
 				controller.map().controls[gmaps.ControlPosition.TOP_LEFT].push(element[0]);
 
 
-//				gmaps.event.addListener(_drawingManager, 'circlecomplete', function (radiusCircle) {
-//
-//
-//					_logNewSourceInfo();
-//				});
-//
-//				gmaps.event.addListener(_drawingManager, 'polylinecomplete', function (path) {
-//					var center = path.getPath().getAt(0);
-//					var newSource = {
-//						path  : path,
-//						radius: new gmaps.Circle($.extend({
-//							center: center,
-//							radius: 10 * Math.pow(2, 18 - _map.getZoom())
-//						}, DRAWING_RADIUS_OPTIONS)),
-//						reach :
-//					};
-//
-//					_prepareEditableSource(newSource);
-//
-//					gmaps.event.addListener(newSource.radius, 'center_changed', function () {
-//						newSource.path.getPath().setAt(0, newSource.radius.getCenter());
-//						_logNewSourceInfo();
-//					});
-//
-//					gmaps.event.addListener(path.getPath(), 'insert_at', function () { _logNewSourceInfo(); });
-//					gmaps.event.addListener(path.getPath(), 'remove_at', function () { _logNewSourceInfo(); });
-//					gmaps.event.addListener(path.getPath(), 'set_at', function () { _logNewSourceInfo(); });
-//
-//					_drawingManager.setDrawingMode(null);
-//
-//					_logNewSourceInfo();
-//				});
-//
-//				function _prepareEditableSource(newSource) {
-//					gmaps.event.addListener(newSource.radius, 'center_changed', function () {
-//						newSource.reach.setCenter(newSource.radius.getCenter());
-//						_logNewSourceInfo();
-//					});
-//
-//					gmaps.event.addListener(newSource.radius, 'radius_changed', function () {
-//						if (newSource.reach.getRadius() < newSource.radius.getRadius() + 5) {
-//							newSource.reach.setRadius(newSource.radius.getRadius() + 5);
-//						}
-//						_logNewSourceInfo();
-//					});
-//
-//					gmaps.event.addListener(newSource.reach, 'radius_changed', function () {
-//						if (newSource.reach.getRadius() < newSource.radius.getRadius() + 5) {
-//							newSource.radius.setRadius(Math.max(2, newSource.reach.getRadius() - 5));
-//						}
-//						_logNewSourceInfo();
-//					});
-//
-//					gmaps.event.addListener(newSource.radius, 'center_changed', function () {
-//						newSource.reach.setCenter(newSource.radius.getCenter());
-//						_logNewSourceInfo();
-//					});
-//
-//					return _newSources.push(newSource);
-//				}
-
-
 				///////////////////////////////////////
 				////// Logging new Sound Sources //////
 				//////                           //////
@@ -388,25 +328,29 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map'], function ($, gmaps, angul
 						window.setTimeout(function () { _OKtoLog = true; }, 100);
 						console.debug("----------------------------------------");
 						_newSources.map(function (s) {
-							//noinspection JSValidateTypes
 							if (s.path) {
-								console.debug('<ts-area radius="{{1}}" reach="{{2}}" path="{{3}}" loudness="1"><source src="" type="audio/mp3"></ts-area>'
+								console.debug(('<ts-area radius="{{1}}" reach="{{2}}" path="{{3}}" loudness="1">' +
+								               '<source src="{{4}}" type="audio/mp3">' +
+								               '</ts-area>')
 										.format(s.radius.getRadius(),
 												s.reach.getRadius(),
-												gmaps.geometry.encoding.encodePath(s.path.getPath()).replace(/(\\|")/g, '\\$1')));
+												gmaps.geometry.encoding.encodePath(s.path.getPath())
+														.replace('"', '&quot;'),
+												s.audio.src || ""));
 							} else {
-								console.debug('<ts-area lat="{{1}}" lng="{{2}}" radius="{{3}}" reach="{{4}}" loudness="1"><source src="" type="audio/mp3"></ts-area>'
+								console.debug(('<ts-area lat="{{1}}" lng="{{2}}" radius="{{3}}" reach="{{4}}" loudness="1">' +
+								               '<source src="{{5}}" type="audio/mp3">' +
+								               '</ts-area>')
 										.format(s.radius.getCenter().lat(),
 												s.radius.getCenter().lng(),
 												s.radius.getRadius(),
-												s.reach.getRadius()));
+												s.reach.getRadius(),
+												s.audio.src || ""));
 							}
-
 						});
 						console.debug("----------------------------------------");
 					}
 				}
-
 			}
 
 

@@ -21,7 +21,6 @@ require.config({
 //
 var TALESCAPE_ANGULAR_DIRECTIVES = [
 	'ts-map',
-	'ts-scenario',
 	'ts-area',
 	'ts-source-controls',
 	'ts-user-pos-controls',

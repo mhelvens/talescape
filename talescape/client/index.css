@@ -26,12 +26,12 @@ html, body {
 	line-height : 0; }
 
 .ts-controls > div > div {
+	padding                 : 4px;
 	direction               : ltr;
 	overflow                : hidden;
 	position                : relative;
 	-webkit-user-select     : none;
 	background-color        : white;
-	padding                 : 4px;
 	-webkit-background-clip : padding-box;
 	background-clip         : padding-box;
 	border-top              : solid 1px rgba(0, 0, 0, 0.14902);
@@ -40,15 +40,14 @@ html, body {
 	-webkit-box-shadow      : rgba(0, 0, 0, 0.29804) 0px 1px 4px -1px;
 	box-shadow              : rgba(0, 0, 0, 0.29804) 0px 1px 4px -1px; }
 
-.ts-controls > div > div.button:hover {
-	background-color : #ebebeb; }
+.ts-controls > div > div.button:hover, .ts-controls > div > div.select:hover {
+	background-color : #d2e6ff; }
 
 .ts-controls > div > div > span {
 	display : inline-block; }
 
 .ts-controls > div > div > span > * {
 	height   : 16px;
-	padding  : 0;
 	overflow : hidden;
 	position : relative;
 	margin   : 0; }
@@ -64,6 +63,18 @@ html, body {
 	font-weight : bold;
 	line-height : 16px;
 	padding     : 0px 4px; }
+
+.ts-controls > div > div > span > select {
+	border           : none;
+	font-style       : italic;
+	background-color : transparent;
+	padding          : 0 4px 0 0 !important;
+	font-family      : Roboto, Arial, sans-serif;
+	margin-top       : -2px !important;
+	height           : 18px !important; }
+
+.ts-controls > div > div > span > select:focus {
+	outline : none; }
 
 .ts-controls > div:first-child > div {
 	border-top-left-radius    : 2px;

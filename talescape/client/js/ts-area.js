@@ -40,6 +40,14 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 			link: function (scope, element, attrs, controller) {
 
 
+				//////////////////////////
+				////// Audio Player //////
+				//////              //////
+
+
+				var audioPlayer = new AudioPlayer(element.children('audio')[0]);
+
+
 				///////////////////////////
 				////// Source Marker //////
 				//////               //////
@@ -51,15 +59,9 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 						parseFloat(attrs['lng']),
 						parseFloat(attrs['radius']),
 						parseFloat(attrs['reach']),
-						attrs['path']);
-
-
-				//////////////////////////
-				////// Audio Player //////
-				//////              //////
-
-
-				var audioPlayer = new AudioPlayer(element.children('audio')[0]);
+						attrs['path'],
+						parseFloat(attrs['velocity']),
+						attrs['invisible']);
 
 
 				////////////////////////////////
@@ -118,6 +120,8 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 				var object = {};
 
 
+				object.pos = sourceMarker.pos;
+
 				var _running = false;
 
 				object.running = function () {
@@ -159,7 +163,7 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 					_onPauseCallback.add(handler);
 				};
 
-				if (attrs['scenario']) {
+				if (attrs['scenario'] !== undefined) {
 					controller.registerScenario(attrs['scenario']);
 				}
 				controller.registerSource(object, attrs['scenario']);

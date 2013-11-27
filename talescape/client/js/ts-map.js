@@ -1,8 +1,14 @@
 'use strict';
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor'], function ($, gmaps, angular) {
+define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor', 'geo'], function ($, gmaps, angular) { ////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+	//// The root scenario is the empty string ""
+	//// (for sources directly under ts-map)
+	//
+	var ROOT_SCENARIO = "";
 
 
 	////////////////////////////////////////////////////////////
@@ -10,46 +16,28 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor'],
 	////////////////////////////////////////////////////////////
 
 
-	angular.module('TS').controller('MapController', ['$scope', '$element', '$attrs', 'geo', 'UserPosition', function ($scope, $element, $attrs, geo, UserPosition) {
+	angular.module('TS').controller('MapController', ['UserPosition', 'geo', function (UserPosition, geo) {
 
 
 		var result = {};
 
 
-		/////////////////////////////
-		////// Create the Map //////
-		//////                //////
+		//////////////////////////////////////////////////////
+		////// Create the Map and Set the User Position //////
+		//////                                          //////
 
 
-		var _map = new gmaps.Map($element.children(".canvas")[0], {
-			// fixed options
-			mapTypeId             : gmaps.MapTypeId.SATELLITE,  // default: satellite view
-			disableDefaultUI      : true,                       // default: no controls
-			disableDoubleClickZoom: true,                       // default: no double click zoom
-			styles                : [
-				{featureType: "all", elementType: "labels", stylers: [
-					{visibility: "off"}
-				]}
-			],
-			zoom                  : parseInt($attrs['zoom']) || 20, // start zoom level
-			center                : new gmaps.LatLng(
-					parseFloat($attrs['lat']) || 52.3564841,
-					parseFloat($attrs['lng']) || 4.9520856)   // start location (default: CWI)
-		});
+		var _map;
+		var _userPos;
 
+		result.setMap = function (map) {
+			_map = map;
+			_userPos = new UserPosition(map);
+		};
 
 		result.map = function () {
 			return _map;
 		};
-
-
-		/////////////////////////////////////////////////
-		////// Manage the User Position on the Map //////
-		//////                                     //////
-
-
-		var _userPos = new UserPosition(result);
-
 
 		result.onNewUserPos = function (handler) {
 			_userPos.onNewPos(handler);
@@ -58,14 +46,6 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor'],
 		result.userPos = function () {
 			return _userPos.pos();
 		};
-
-		gmaps.event.addListener(_map, 'dblclick', function (mouseEvent) {
-			mouseEvent.stop();
-			$scope.$apply(function () {
-				geo.setMode(geo.GEO_FAKE);
-				geo.setFakePosition(mouseEvent.latLng.lat(), mouseEvent.latLng.lng());
-			});
-		});
 
 
 		/////////////////////////////
@@ -76,7 +56,17 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor'],
 		result.CENTERING_NOT = 'value: centering-not';
 		result.CENTERING_USER = 'value: centering-user';
 
-		var _centering = result.CENTERING_USER;
+		//// The initial setting is not to center automaticaly,
+		//
+		var _centering = result.CENTERING_NOT;
+
+
+		//// But we do want to start centered
+		//
+		geo.getCurrentPosition(function (pos) {
+			_map.setCenter(pos.toLatLng());
+		});
+
 		var _onCenteringChangedCallbacks = $.Callbacks('unique');
 
 		result.centering = function () {
@@ -96,29 +86,6 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor'],
 			_onCenteringChangedCallbacks.add(handler);
 		};
 
-		result.onCenteringChanged(function (centering) {
-			if (centering == result.CENTERING_USER) {
-				_map.setCenter((_userPos.pos() || geo.DEFAULT_POSITION).toLatLng());
-				_map.setOptions({ draggable: false });
-			} else {
-				_map.setOptions({ draggable: true });
-			}
-		});
-
-		_userPos.onNewPos(function (pos) {
-			if (_centering == result.CENTERING_USER) {
-				_map.setCenter((pos || geo.DEFAULT_POSITION).toLatLng());
-			}
-		});
-
-		gmaps.event.addListener(_map, 'zoom_changed', function () {
-			if (_centering == result.CENTERING_USER) {
-				$scope.$apply(function () {
-					_map.setCenter((_userPos.pos() || geo.DEFAULT_POSITION).toLatLng());
-				});
-			}
-		});
-
 		_onCenteringChangedCallbacks.fire(_centering);
 
 
@@ -126,23 +93,28 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor'],
 		////// Registering Scenarios //////
 		//////                       //////
 
-		// The root scenario is the empty string "" (for sources directly under ts-map)
-
+		var _scenarios = []; // maps scenarios to an array of sources
 
 		var _scenarioRegisteredCallback = $.Callbacks('unique');
 
 		result.registerScenario = function (scenario) {
-			_scenarioRegisteredCallback.fire(scenario || "");
+			if (scenario !== undefined) {
+				_scenarios[scenario] = [];
+				_scenarioRegisteredCallback.fire(scenario);
+			}
 		};
 
 		result.onScenarioRegistered = function (handler) {
+			for (var sc in _scenarios) {
+				//noinspection JSUnfilteredForInLoop
+				handler(sc);
+			}
 			_scenarioRegisteredCallback.add(handler);
 		};
 
 		//// register the root scenario
 		//
-		// TODO: this signal may come too late for the source-controls to pick up.
-		result.registerScenario("");
+		result.registerScenario(ROOT_SCENARIO);
 
 
 		/////////////////////////////////
@@ -152,12 +124,20 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor'],
 
 		var _sourceRegisteredCallback = $.Callbacks('unique');
 
-		// scenario is possibly undefined -- need to make it ""
 		result.registerSource = function (source, scenario) {
-			_sourceRegisteredCallback.fire(source, scenario || "");
+			//noinspection AssignmentToFunctionParameterJS
+			scenario = (scenario === undefined ? ROOT_SCENARIO : scenario);
+			_scenarios[scenario].push(source);
+			_sourceRegisteredCallback.fire(source, scenario);
 		};
 
 		result.onSourceRegistered = function (handler) {
+			for (var sc in _scenarios) {
+				//noinspection JSUnfilteredForInLoop
+				_scenarios[sc].map(function (source) {
+					handler(source);
+				});
+			}
 			_sourceRegisteredCallback.add(handler);
 		};
 
@@ -176,16 +156,83 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor'],
 	////////////////////////////////////////////////////////////
 
 
-	angular.module('TS').directive('tsMap', function () {
+	angular.module('TS').directive('tsMap', ['geo', function (geo) {
 		return {
 			controller : 'MapController',
 			restrict   : 'E',
 			templateUrl: 'partials/tsMap/ts-map.html',
 			replace    : true,
 			transclude : true,
-			scope      : {}
+			scope: {},
+
+			compile: function () {
+				return {
+					pre : function (scope, element, attrs, controller) {
+						//// Create the map
+						//
+						controller.setMap(new gmaps.Map(element.children(".canvas")[0], {
+							// fixed options
+							mapTypeId             : gmaps.MapTypeId.SATELLITE,
+							disableDefaultUI      : true,
+							disableDoubleClickZoom: true,
+							styles                : [
+								{featureType: "all", elementType: "labels", stylers: [
+									{visibility: "off"}
+								]}
+							],
+							// starting options
+							zoom                  : parseInt(attrs['zoom']) || 20,
+							center                : new gmaps.LatLng(
+									parseFloat(attrs['lat']) || geo.DEFAULT_POSITION.coords.latitude,
+									parseFloat(attrs['lng']) || geo.DEFAULT_POSITION.coords.latitude)
+						}));
+
+						//// Set fake position on double click
+						//
+						gmaps.event.addListener(controller.map(), 'dblclick', function (mouseEvent) {
+							mouseEvent.stop();
+							scope.$apply(function () {
+								geo.setMode(geo.GEO_FAKE);
+								geo.setFakePosition(mouseEvent.latLng.lat(), mouseEvent.latLng.lng());
+							});
+						});
+
+						//// Adjust to new centering settings
+						//
+						controller.onCenteringChanged(function (centering) {
+							if (centering == controller.CENTERING_USER) {
+								controller.map().setCenter((geo.lastKnownPosition() || geo.DEFAULT_POSITION).toLatLng());
+								controller.map().setOptions({ draggable: false });
+							} else {
+								controller.map().setOptions({ draggable: true });
+							}
+						});
+
+						//// Adjust to new user position
+						//
+						geo.watchPosition(function (userPos) {
+							if (controller.centering() == controller.CENTERING_USER) {
+								controller.map().setCenter((userPos || geo.DEFAULT_POSITION).toLatLng());
+							}
+						});
+
+						//// Adjust to new zoom-level
+						//
+						gmaps.event.addListener(controller.map(), 'zoom_changed', function () {
+							if (controller.centering() == controller.CENTERING_USER) {
+								scope.$apply(function () {
+									controller.map().setCenter((geo.lastKnownPosition() || geo.DEFAULT_POSITION).toLatLng());
+								});
+							}
+						});
+					},
+					post: function (scope, element, attrs, controller) {
+
+					}
+				};
+			}
 		};
-	});
+	}]);
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

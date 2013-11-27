@@ -1,7 +1,7 @@
 'use strict';
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular) {
+define(['jquery', 'gmaps', 'angular', 'TS', 'geo'], function ($, gmaps, angular) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -9,8 +9,14 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular) {
 	var SOME_SOURCES = 1;
 	var ALL_SOURCES = 2;
 
+	var ICONS = [];
+	ICONS[NO_SOURCES] = 'img/run-all.png';
+	ICONS[SOME_SOURCES] = 'img/pause-some.png';
+	ICONS[ALL_SOURCES] = 'img/pause-all.png';
+
+
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	angular.module('TS').directive('tsSourceControls', function () {
+	angular.module('TS').directive('tsSourceControls', ['geo', function (geo) {
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		return {
@@ -23,17 +29,38 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular) {
 			link: function (scope, element, attrs, controller) {
 
 
-				scope.icons = {};
-				scope.icons[NO_SOURCES] = 'img/run-all.png';
-				scope.icons[SOME_SOURCES] = 'img/pause-some.png';
-				scope.icons[ALL_SOURCES] = 'img/pause-all.png';
+				//////////////////////
+				////// Counters //////
+				//////          //////
 
-				scope.nextScenarioIcon = function () {
-					return ''; // TODO: create icon; or perhaps switch to a combobox and lose this button
-				}
 
-				scope.running = [];
-				scope.count = [];
+				var _running = [];
+				var _count = [];
+
+
+				scope.count = function () {
+					return _count[scope.scenario];
+				};
+
+				scope.running = function () {
+					return _running[scope.scenario];
+				};
+
+
+				//////////////////////////////
+				////// The Control Icon //////
+				//////                  //////
+
+
+				scope.controlIcon = function () {
+					if (_running[scope.scenario] == 0) {
+						return ICONS[NO_SOURCES];
+					} else if (_running[scope.scenario] < _count[scope.scenario]) {
+						return ICONS[SOME_SOURCES];
+					} else {
+						return ICONS[ALL_SOURCES];
+					}
+				};
 
 
 				/////////////////////////////////////////////
@@ -41,32 +68,127 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular) {
 				//////                                 //////
 
 
+				scope.scenarios = [];
+
 				var _sources = [];
-				var _scenarios = [];
-				var _currentScenario = 0;
-
-				// TODO: The below is temporary, as this module doesn't pick up the registration of "" by ts-map
-				_scenarios.push("");
-				_sources[""] = [];
-
-				scope.scenario = "";
-				scope.running[""] = 0;
-				scope.count[""] = 0;
 
 				controller.onScenarioRegistered(function (scenario) {
-					if (!_sources[scenario]) {
-						_scenarios.push(scenario);
+					if (scope.scenario === undefined) {
+						scope.scenario = scenario;
+					}
+					if (_sources[scenario] === undefined) {
+						scope.scenarios.push(scenario);
 						_sources[scenario] = [];
-						scope.count[scenario] = 0;
-						scope.running[scenario] = 0;
+						_count[scenario] = 0;
+						_running[scenario] = 0;
 					}
 				});
 
 				controller.onSourceRegistered(function (source, scenario) {
 					_sources[scenario].push(source);
-					scope.count[scenario]++;
-					source.onRun(function () { scope.running[scenario]++; });
-					source.onPause(function () { scope.running[scenario]--; });
+					_count[scenario]++;
+					source.onRun(function () { _running[scenario]++; });
+					source.onPause(function () { _running[scenario]--; });
+				});
+
+
+				///////////////////////////////
+				////// Control Functions //////
+				//////                   //////
+
+
+				scope.runAll = function (scenario) {
+					if (scenario === undefined) {
+						//noinspection AssignmentToFunctionParameterJS
+						scenario = scope.scenario;
+					}
+					_sources[scenario].map(function (source) {
+						source.run();
+					});
+				};
+
+				scope.pauseAll = function (scenario) {
+					if (scenario === undefined) {
+						//noinspection AssignmentToFunctionParameterJS
+						scenario = scope.scenario;
+					}
+					_sources[scenario].map(function (source) {
+						source.pause();
+					});
+				};
+
+				scope.runOrPauseAll = function (scenario) {
+					if (scenario === undefined) {
+						//noinspection AssignmentToFunctionParameterJS
+						scenario = scope.scenario;
+					}
+					if (_running[scenario] == 0) { scope.runAll(scenario); }
+					else { scope.pauseAll(scenario); }
+				};
+
+
+				////////////////////////////////
+				////// Scenario Selection //////
+				//////                    //////
+
+
+				scope.$watch('scenario', function (newScenario, oldScenario) {
+					//// Pause the old scenario
+					//
+					scope.pauseAll(oldScenario);
+
+					//// Center in on the new one
+					//
+					if (_count[newScenario]) {
+						var bounds = new gmaps.LatLngBounds;
+						_sources[newScenario].map(function (source) {
+							bounds.extend(source.pos());
+						});
+						controller.map().fitBounds(bounds);
+						//controller.map().setZoom(controller.map().getZoom()-1);
+
+						// HACK!
+						// TODO: Make it possible to encode such messages properly
+						//
+						if (newScenario == "Dam Square Experience") {
+							var message = new gmaps.InfoWindow({
+								content : "<img style=\"display: block; width: 400px\" src=\"img/Gezicht-op-de-Dam.jpg\">" +
+								          "<p style=\"font-size:12pt\">" +
+								          "The Dam Square Experience is made possible by the NWO project " +
+								          "<a style=\"font-size:12pt\" href=\"http://www.maastrichtsts.nl/?project=soundscapes-of-the-urban-past-staged-sound-as-mediated-cultural-heritage\">Soundscapes of the Urban Past</a>, " +
+								          "performed by the <a style=\"font-size:12pt\" href=\"http://www.maastrichtsts.nl\">STS&nbsp;research&nbsp;group</a> of Maastricht University." +
+								          "</p>",
+								position: controller.map().getCenter(),
+								maxWidth: 400
+							});
+
+							message.open(controller.map());
+
+							gmaps.event.addListenerOnce(message, 'closeclick', function () {
+								if (bounds.contains(geo.lastKnownPosition().toLatLng())) {
+									message.setContent(
+											"<p style=\"font-size:12pt\">" +
+											"I see you're already at the Dam. Great! " +
+											"<emph>Click</emph> on the play button in the top left corner of your screen to start the experience:" +
+											"</p>" +
+											"<div style=\"text-align: center;\"><img style=\"border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/run-all.png\"></div>" +
+											"<p style=\"font-size:12pt\">You can then hear the sounds of the Dam relative to your current position.</p>");
+								} else {
+									message.setContent(
+											"<p style=\"font-size:12pt\">" +
+											"<emph>Double click</emph> on an empty space on the map to simulate your presence there:" +
+											"</p>" +
+											"<div style=\"text-align: center\"><img src=\"img/marker-geomode-fake.png\"></div>" +
+											"<p style=\"font-size:12pt\">" +
+											"Then, <emph>click</emph> on the play button in the top left corner of your screen to start the experience:" +
+											"</p>" +
+											"<div style=\"text-align: center;\"><img style=\"border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/run-all.png\"></div>" +
+											"<p style=\"font-size:12pt\">You can then drag around the location marker to hear the sounds of the Dam relative to your current position.</p>");
+								}
+								message.open(controller.map());
+							});
+						}
+					}
 				});
 
 
@@ -78,45 +200,11 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular) {
 				controller.map().controls[gmaps.ControlPosition.TOP_LEFT].push(element[0]);
 
 
-				/////////////////////////////
-				////// Scope Functions //////
-				//////                 //////
-
-
-				scope.vagueCount = function () {
-					if (scope.running[scope.scenario] == 0) { return NO_SOURCES; }
-					else if (scope.running[scope.scenario] < scope.count[scope.scenario]) { return SOME_SOURCES; }
-					else { return ALL_SOURCES; }
-				}
-
-				scope.runAll = function () {
-					_sources[scope.scenario].map(function (source) {
-						source.run();
-					});
-				};
-
-
-				scope.pauseAll = function () {
-					_sources[scope.scenario].map(function (source) {
-						source.pause();
-					});
-				};
-
-				scope.runOrPauseAll = function () {
-					if (scope.running[scope.scenario] == 0) { scope.runAll(); }
-					else { scope.pauseAll(); }
-				};
-
-				scope.nextScenario = function () {
-					_currentScenario = (_currentScenario + 1) % _scenarios.length;
-					scope.scenario = _scenarios[_currentScenario];
-				};
-
 			}
 		};
 
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	});
+	}]);
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 

@@ -1,18 +1,27 @@
-<div class="ts-controls"
-     title="Of all {{count[scenario]}} sources, {{running[scenario] || 'none'}} {{running[scenario]==1 && 'is' || 'are'}} currently running.">
+<div class="ts-controls">
 	<div>
-		<div class="button" draggable="false" ng-click="nextScenario()">
-			<span><img ng-src="{{nextScenarioIcon()}}"></span>
+		<div class="select" draggable="false">
+			<span>
+				<!--suppress HtmlFormInputWithoutLabel -->
+				<select ng-model="scenario">
+					<option ng-repeat="sc in scenarios" value="{{sc}}">
+						{{sc || '&lt;no scenario&gt;'}}
+					</option>
+				</select>
+			</span>
 		</div>
 	</div>
 	<div>
-	<div class="button" draggable="false" ng-click="runOrPauseAll()">
-			<span><img ng-src="{{icons[vagueCount()]}}"></span>
+		<div class="button"
+		     draggable="false"
+		     ng-click="runOrPauseAll()"
+		     title="{{running() && 'Pause Everything' || 'Play Everything'}}">
+			<span><img ng-src="{{controlIcon()}}"></span>
 		</div>
 	</div>
-	<div>
-		<div class="text" draggable="false">
-			<span><div class="text">{{running[scenario]}} / {{count[scenario]}}</div></span>
+	<div title="Of all {{count()}} sources, {{running() || 'none'}} {{running()==1 && 'is' || 'are'}} currently running.">
+		<div draggable="false">
+			<span><div class="text">{{running()}} / {{count()}}</div></span>
 		</div>
 	</div>
 </div>

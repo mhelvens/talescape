@@ -9,6 +9,30 @@ define(['jquery', 'gmaps', 'angular', 'geo', 'TS', 'ts-map'], function ($, gmaps
 	angular.module('TS').directive('tsUserPosControls', ['geo', function (geo) {
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+		var GEOMODE = [];
+		GEOMODE[geo.GEO_REAL] = [];
+		GEOMODE[geo.GEO_FAKE] = [];
+
+		GEOMODE[geo.GEO_REAL][geo.GEO_KNOWN] = {
+			icon : 'img/geomode-real.png',
+			title: 'Currently using real GPS coordinates.'
+		};
+		GEOMODE[geo.GEO_REAL][geo.GEO_UNKNOWN] = {
+			icon : 'img/geomode-real-unknown.png',
+			title: 'Currently trying to use real GPS coordinates, but your position is unknown.'
+		};
+
+		GEOMODE[geo.GEO_FAKE][geo.GEO_KNOWN] = {
+			icon : 'img/geomode-fake.png',
+			title: 'Currently using manual GPS coordinates.'
+		};
+		GEOMODE[geo.GEO_FAKE][geo.GEO_UNKNOWN] = {
+			icon : 'img/geomode-fake-unknown.png',
+			title: 'Currently using manual GPS coordinates (your real position is unknown).'
+		};
+
+
 		return {
 			restrict   : 'E',
 			templateUrl: 'partials/tsControls/ts-user-pos-controls.html',
@@ -24,27 +48,7 @@ define(['jquery', 'gmaps', 'angular', 'geo', 'TS', 'ts-map'], function ($, gmaps
 				//////          //////
 
 
-				var GEOMODE = [];
 
-				GEOMODE[geo.GEO_REAL] = [];
-				GEOMODE[geo.GEO_REAL][geo.GEO_KNOWN] = {
-					icon : 'img/geomode-real.png',
-					title: 'Currently using real GPS coordinates.'
-				};
-				GEOMODE[geo.GEO_REAL][geo.GEO_UNKNOWN] = {
-					icon : 'img/geomode-real-unknown.png',
-					title: 'Currently trying to use real GPS coordinates, but your position is unknown.'
-				};
-
-				GEOMODE[geo.GEO_FAKE] = [];
-				GEOMODE[geo.GEO_FAKE][geo.GEO_KNOWN] = {
-					icon : 'img/geomode-fake.png',
-					title: 'Currently using manual GPS coordinates.'
-				};
-				GEOMODE[geo.GEO_FAKE][geo.GEO_UNKNOWN] = {
-					icon : 'img/geomode-fake-unknown.png',
-					title: 'Currently using manual GPS coordinates (your real position is unknown).'
-				};
 
 				scope.toggleGeoMode = function () {
 					geo.toggleMode();

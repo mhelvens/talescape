@@ -18,7 +18,7 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map'], function ($, gmaps, angul
 
 
 //      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		return function (mapController) { //////////////////////////////////////////////////////////////////////////////
+		return function (map) { //////////////////////////////////////////////////////////////////////////////
 //      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -31,7 +31,7 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map'], function ($, gmaps, angul
 
 
 			var _locationMarker = new gmaps.Marker({
-				map      : mapController.map(),
+				map: map,
 				title    : "You Are Here",
 				zIndex   : 999, // always on the foreground
 				clickable: false,
@@ -40,7 +40,7 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map'], function ($, gmaps, angul
 			});
 
 			var _locationMarkerAccuracyCircle = new gmaps.Circle({
-				map          : mapController.map(),
+				map: map,
 				strokeColor  : '#4190da',
 				strokeOpacity: 0.8,
 				strokeWeight : 1,
@@ -105,14 +105,6 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map'], function ($, gmaps, angul
 
 			geo.watchPosition(function (userPos) {
 				if (_lastKnownPos.coords != userPos.coords) {
-//				console.log(
-//						(geo.usingFakeGeo() ? "Fake " : "") +
-//						"GeoLocation registered:\n" +
-//						"- latitude:  " + userPos.coords.latitude + "\n" +
-//						"- longitude: " + userPos.coords.longitude + "\n" +
-//						"- accuracy:  " + userPos.coords.accuracy
-//				);
-
 					userPos.latLng = userPos.toLatLng();
 
 					_lastKnownPos = userPos;

@@ -7,8 +7,8 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 	////// Constants //////
 	//////           //////
 
-	var ANIMATE = true;
-	var REACH_CIRCLE = false;
+	var ANIMATE = false;
+	var REACH_CIRCLE = true;
 
 	var ANI_FIRST_STATE = 27; // frames
 	var ANI_HALT_STATE = 23; // frames
@@ -18,11 +18,10 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 	var ANI_CIRCLE_MAX_WIDTH = 4;  // meters
 	var ANI_WAVE_SPEED = 7;  // factor
 
-	var PATH_SPEED = 10/* m/s */;
 	var PATH_STEP_TIME = 50/* ms */;
 
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	return function (_map, _lat, _lng, _radius, _reach, _encodedPath) { ////////////////////////////////////////////////
+	return function (_map, _lat, _lng, _radius, _reach, _encodedPath, _velocity, _invisible) { /////////////////////////
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		// TODO: Make sure (_radius < _reach)
@@ -125,6 +124,61 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 		//////             //////
 
 
+		if (!_encodedPath) {
+			_staticPos = new google.maps.LatLng(_lat, _lng);
+		} else {
+
+			var _path = google.maps.geometry.encoding.decodePath(_encodedPath);
+			var _segments = [];
+
+			_lat = _path[0].lat();
+			_lng = _path[0].lng();
+
+			//// Precompute the distance and heading of each path segment
+			//
+			for (var segment = 0; segment < _path.length - 1; ++segment) {
+				var from = _path[segment];
+				var to = _path[segment + 1]; // no wrap around; cycle paths have start and end point equal
+
+				_segments[segment] = {
+					distance: google.maps.geometry.spherical.computeDistanceBetween(from, to),
+					heading : google.maps.geometry.spherical.computeHeading(from, to)
+				};
+			}
+
+			//// Set up movement along the path
+			//
+			var _lastTime = Date.now();
+			var _segment = 0;
+			var _segmentProgress = 0;
+			var _dynamicPos = _path[_segment];
+
+			var _takePathStep = function () {
+				var thisTime = Date.now();
+				var distanceToGo = (thisTime - _lastTime) / 1000 * (_velocity || 10);
+				while (distanceToGo > 0) {
+					if (_segmentProgress + distanceToGo > _segments[_segment].distance) {
+						distanceToGo -= (_segments[_segment].distance - _segmentProgress);
+						_segmentProgress = 0;
+						_segment = (_segment + 1) % _segments.length;
+					} else {
+						_segmentProgress += distanceToGo;
+						_dynamicPos = google.maps.geometry.spherical.computeOffset(
+								_path[_segment], _segmentProgress, _segments[_segment].heading);
+						distanceToGo = 0;
+					}
+				}
+				//noinspection ReuseOfLocalVariableJS
+				_lastTime = thisTime;
+
+				_mainCircle.setCenter(_pos());
+				if (REACH_CIRCLE) { _reachCircle.setCenter(_pos()); }
+
+				_newPosCallbacks.fire(_pos());
+			};
+		}
+
+
 		//// Instantiate circles
 		//
 		(function () {
@@ -145,7 +199,7 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				strokePosition: google.maps.INSIDE,
 				strokeWeight  : 4,
 				zIndex        : 1,
-				visible       : true
+				visible: !_invisible
 			});
 
 			_mainCircle = new google.maps.Circle(mainCircleOptions);
@@ -174,7 +228,7 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 					strokeOpacity: 1,
 					strokeWeight : 1,
 					zIndex       : 3,
-					visible      : true,
+					visible: !_invisible,
 					radius       : _reach
 				});
 
@@ -182,57 +236,6 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 			}
 
 		})();
-
-
-		if (!_encodedPath) {
-			_staticPos = new google.maps.LatLng(_lat, _lng);
-		} else {
-			var _path = google.maps.geometry.encoding.decodePath(_encodedPath);
-			var _segments = [];
-
-			//// Precompute the distance and heading of each path segment
-			//
-			for (var segment = 0; segment < _path.length; ++segment) {
-				var from = _path[segment];
-				var to = _path[(segment + 1) % _path.length];
-
-				_segments[segment] = {
-					distance: google.maps.geometry.spherical.computeDistanceBetween(from, to),
-					heading : google.maps.geometry.spherical.computeHeading(from, to)
-				};
-			}
-
-			//// Set up movement along the path
-			//
-			var _lastTime = Date.now();
-			var _segment = 0;
-			var _segmentProgress = 0;
-			var _dynamicPos = _path[_segment];
-
-			var _takePathStep = function () {
-				var thisTime = Date.now();
-				var distanceToGo = (thisTime - _lastTime) / 1000 * PATH_SPEED;
-				while (distanceToGo > 0) {
-					if (_segmentProgress + distanceToGo > _segments[_segment].distance) {
-						distanceToGo -= (_segments[_segment].distance - _segmentProgress);
-						_segmentProgress = 0;
-						_segment = (_segment + 1) % _path.length;
-					} else {
-						_segmentProgress += distanceToGo;
-						_dynamicPos = google.maps.geometry.spherical.computeOffset(
-								_path[_segment], _segmentProgress, _segments[_segment].heading);
-						distanceToGo = 0;
-					}
-				}
-				//noinspection ReuseOfLocalVariableJS
-				_lastTime = thisTime;
-
-				_mainCircle.setCenter(_pos());
-				if (REACH_CIRCLE) { _reachCircle.setCenter(_pos()); }
-
-				_newPosCallbacks.fire(_pos());
-			};
-		}
 
 		//// Listen for zoom-level change
 		//
@@ -279,7 +282,7 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				_aniCircle1.setOptions({
 					radius      : _radius + _zoomScale() * state1 * ANI_WAVE_SPEED,
 					strokeWeight: (ANI_CIRCLE_MAX_WIDTH - state1 * ANI_CIRCLE_MAX_WIDTH / ANI_HALT_STATE),
-					visible     : (state1 < ANI_HALT_STATE)
+					visible: (state1 < ANI_HALT_STATE) && !_invisible
 				});
 
 				var state2 = _animationState(ANI_SECOND_WAVE_DELAY);
@@ -291,7 +294,7 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				_aniCircle2.setOptions({
 					radius      : _radius + _zoomScale() * state2 * ANI_WAVE_SPEED,
 					strokeWeight: (ANI_CIRCLE_MAX_WIDTH - state2 * ANI_CIRCLE_MAX_WIDTH / ANI_HALT_STATE),
-					visible     : (state2 < ANI_HALT_STATE)
+					visible: (state2 < ANI_HALT_STATE) && !_invisible
 				});
 			}
 		}

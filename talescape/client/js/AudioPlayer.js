@@ -87,6 +87,12 @@ define(function () { ///////////////////////////////////////////////////////////
 		};
 
 
+		//// Valid Source? ////
+
+		this.hasValidSrc = function () {
+			return !!(_audioElement.currentSrc);
+		};
+
 		/////////////////////////////
 		////// Private methods //////
 		//////                 //////
