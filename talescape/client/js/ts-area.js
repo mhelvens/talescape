@@ -33,7 +33,7 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 			restrict   : 'E',
 			templateUrl: 'partials/tsArea/tsArea.html',
 			replace    : true,
-			scope: {},
+			scope      : {},
 			transclude : true,
 			require    : '^tsMap',
 
@@ -71,7 +71,7 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 
 				var loudness = parseFloat(attrs['loudness']);
 
-				function adjustVolume() {
+				function processInteractionWithUser() {
 					var volume = 0;
 
 					if (controller.userPos() && controller.userPos().latLng) {
@@ -94,6 +94,8 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 						}
 					}
 
+					sourceMarker.setUserWithinReach(volume > 0);
+
 					volume *= loudness;
 
 					audioPlayer.setVolume(volume);
@@ -105,11 +107,11 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 				//////                            //////
 
 
-				adjustVolume();
+				processInteractionWithUser();
 
-				controller.onNewUserPos(adjustVolume);
+				controller.onNewUserPos(processInteractionWithUser);
 
-				sourceMarker.onNewPos(adjustVolume);
+				sourceMarker.onNewPos(processInteractionWithUser);
 
 
 				///////////////////////
@@ -133,7 +135,7 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 						_running = true;
 						audioPlayer.loop();
 						sourceMarker.start();
-						window.setTimeout(adjustVolume, 10);
+						window.setTimeout(processInteractionWithUser, 10);
 						_onRunCallback.fire();
 					}
 				};

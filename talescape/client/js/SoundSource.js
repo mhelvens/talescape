@@ -8,7 +8,6 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 	//////           //////
 
 	var ANIMATE = false;
-	var REACH_CIRCLE = true;
 
 	var ANI_FIRST_STATE = 27; // frames
 	var ANI_HALT_STATE = 23; // frames
@@ -24,7 +23,40 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 	return function (_map, _lat, _lng, _radius, _reach, _encodedPath, _velocity, _invisible) { /////////////////////////
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
 		// TODO: Make sure (_radius < _reach)
+
+
+		///////////////////////////////
+		////// Private variables //////
+		//////                   //////
+
+
+		var _staticPos;
+		var _pathTimer;
+
+		var _mainCircle;
+		var _aniCircle1;
+		var _aniCircle2;
+		var _reachCircle;
+
+		var _playing = false;
+
+		if (ANIMATE) {
+			var _aniTimer;
+			var _aniState;
+			var _currentZoom = _map.getZoom();
+		}
+
+
+		//////////////////////
+		////// Position //////
+		//////          //////
+
+
+		function _pos() {
+			return _encodedPath ? _dynamicPos : _staticPos;
+		}
 
 
 		////////////////////////////
@@ -64,7 +96,7 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 					_pathTimer = window.setInterval(_takePathStep, PATH_STEP_TIME);
 				}
 				_mainCircle.setOptions({ fillColor: 'red', strokeColor: 'red' });
-				if (REACH_CIRCLE) { _reachCircle.setVisible(!_invisible); }
+				_reachCircle.setVisible(!_invisible);
 			}
 		};
 
@@ -80,7 +112,7 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				if (_encodedPath) {
 					window.clearInterval(_pathTimer);
 				}
-				if (REACH_CIRCLE) { _reachCircle.setVisible(false); }
+				_reachCircle.setVisible(false);
 			}
 		};
 
@@ -101,26 +133,6 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 		};
 
 
-		///////////////////////////////
-		////// Private variables //////
-		//////                   //////
-
-
-		var _staticPos;
-
-		var _mainCircle;
-		var _aniCircle1;
-		var _aniCircle2;
-		if (REACH_CIRCLE) { var _reachCircle; }
-
-		var _pathTimer;
-
-		var _aniTimer;
-		var _aniState;
-		var _playing = false;
-		var _currentZoom = _map.getZoom();
-
-
 		/////////////////////////
 		////// Constructor //////
 		//////             //////
@@ -132,9 +144,6 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 
 			var _path = google.maps.geometry.encoding.decodePath(_encodedPath);
 			var _segments = [];
-
-			_lat = _path[0].lat();
-			_lng = _path[0].lng();
 
 			//// Precompute the distance and heading of each path segment
 			//
@@ -174,7 +183,7 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				_lastTime = thisTime;
 
 				_mainCircle.setCenter(_pos());
-				if (REACH_CIRCLE) { _reachCircle.setCenter(_pos()); }
+				_reachCircle.setCenter(_pos());
 
 				_newPosCallbacks.fire(_pos());
 			};
@@ -186,7 +195,7 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 		(function () {
 			var commonCircleOptions = {
 				map      : _map,
-				center   : new google.maps.LatLng(_lat, _lng),
+				center   : _pos(),
 				radius   : _radius,
 				draggable: false,
 				editable : false
@@ -222,20 +231,19 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				_aniCircle2 = new google.maps.Circle(aniCircleOptions);
 			}
 
-			if (REACH_CIRCLE) {
-				var reachCircleOptions = $.extend({}, commonCircleOptions, {
-					clickable    : false,
-					fillOpacity  : 0,
-					strokeColor  : 'red',
-					strokeOpacity: .4,
-					strokeWeight : 1,
-					zIndex       : 3,
-					visible      : false,
-					radius       : _reach
-				});
+			var reachCircleOptions = $.extend({}, commonCircleOptions, {
+				clickable    : false,
+				fillOpacity  : 0,
+				fillColor    : 'red',
+				strokeColor  : 'red',
+				strokeOpacity: .3,
+				strokeWeight : 1,
+				zIndex       : 3,
+				visible      : false,
+				radius       : _reach
+			});
 
-				_reachCircle = new google.maps.Circle(reachCircleOptions);
-			}
+			_reachCircle = new google.maps.Circle(reachCircleOptions);
 
 		})();
 
@@ -249,29 +257,24 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 		}
 
 
-		/////////////////////////////
-		////// Private methods //////
-		//////                 //////
+		///////////////////////
+		////// Animation //////
+		//////           //////
 
-
-		function _pos() {
-//			return _encodedPath ? _pathSteps[_currentPathStep] : _staticPos;
-			return _encodedPath ? _dynamicPos : _staticPos;
-		}
-
-		function _animationState(delay) {
-			return (_aniState + delay) % ANI_END_STATE;
-		}
-
-		function _incrementAnimationState() {
-			_aniState = _animationState(1);
-		}
-
-		function _zoomScale() {
-			return Math.pow(2, 15 - _currentZoom);
-		}
 
 		if (ANIMATE) {
+			function _animationState(delay) {
+				return (_aniState + delay) % ANI_END_STATE;
+			}
+
+			function _incrementAnimationState() {
+				_aniState = _animationState(1);
+			}
+
+			function _zoomScale() {
+				return Math.pow(2, 15 - _currentZoom);
+			}
+
 			function _takeAnimationStep() {
 				_incrementAnimationState();
 
@@ -300,6 +303,20 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				});
 			}
 		}
+
+
+		////////////////////////////////////
+		////// React to User Position //////
+		//////                        //////
+
+
+		this.setUserWithinReach = function (val) {
+			if (val) {
+				_reachCircle.setOptions({ fillOpacity: .1, strokeWeight: 2, strokeOpacity:.9 });
+			} else {
+				_reachCircle.setOptions({ fillOpacity: 0, strokeWeight: 1, strokeOpacity:.3 });
+			}
+		};
 
 
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
