@@ -1,0 +1,47 @@
+$info-box-width : 460px;
+$info-box-padding : 10px;
+
+.infoBox {
+	background-color : white;
+	border           : solid 1px black;
+	width            : $info-box-width + 2 * $info-box-padding;
+	padding          : 0;
+	text-align       : justify;
+
+	& > * {
+		display : none;
+	}
+
+	& > .content, & > .OK {
+		display : block;
+	}
+
+	& > .content {
+		margin  : 0;
+		padding : 0;
+		border  : none;
+
+		img {
+			margin : $info-box-padding;
+		}
+
+		p {
+			margin : $info-box-padding + 10px;
+		}
+	}
+
+	& > .OK {
+		width       : 100%;
+		border      : none;
+		border-top  : solid black 1px;
+		background-color: $button-background-color;
+		text-align  : center;
+		margin      : 0px;
+		padding     : 5px;
+		font-weight : bold;
+
+		&:hover {
+			background-color : $button-hover-background-color;
+		}
+	}
+}

@@ -1,7 +1,7 @@
 'use strict';
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-define(['jquery', 'gmaps', 'angular', 'TS', 'geo'], function ($, gmaps, angular) {
+define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'geo'], function ($, gmaps, angular) { //////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -16,10 +16,14 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'geo'], function ($, gmaps, angular)
 
 
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	angular.module('TS').directive('tsSourceControls', ['geo', function (geo) {
+	angular.module('TS').directive('tsSourceControls', ['geo', '$location', function (geo, $location) { ////////////////
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-		return {
+
+//      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		return { ///////////////////////////////////////////////////////////////////////////////////////////////////////
+//      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 			restrict   : 'E',
 			templateUrl: 'partials/tsControls/ts-source-controls.html',
 			replace    : true,
@@ -81,6 +85,9 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'geo'], function ($, gmaps, angular)
 						_sources[scenario] = [];
 						_count[scenario] = 0;
 						_running[scenario] = 0;
+					}
+					if (scenario == $location.hash()) {
+						scope.scenario = $location.hash();
 					}
 				});
 
@@ -151,41 +158,56 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'geo'], function ($, gmaps, angular)
 						// TODO: Make it possible to encode such messages properly
 						//
 						if (newScenario == "Dam Square Experience") {
-							var message = new gmaps.InfoWindow({
-								content : "<img style=\"display: block; width: 400px\" src=\"img/Gezicht-op-de-Dam.jpg\">" +
-								          "<p style=\"font-size:12pt\">" +
-								          "The Dam Square Experience is made possible by the NWO project " +
-								          "<a style=\"font-size:12pt\" href=\"http://www.maastrichtsts.nl/?project=soundscapes-of-the-urban-past-staged-sound-as-mediated-cultural-heritage\">Soundscapes of the Urban Past</a>, " +
-								          "performed by the <a style=\"font-size:12pt\" href=\"http://www.maastrichtsts.nl\">STS&nbsp;research&nbsp;group</a> of Maastricht University." +
-								          "</p>",
+							var message = new InfoBox({
+								content : "<div class=\"content\"></div><button class=\"OK\">OK</button>",
 								position: controller.map().getCenter(),
-								maxWidth: 400
+								pixelOffset: new gmaps.Size(-240, -150)
 							});
 
 							message.open(controller.map());
 
-							gmaps.event.addListenerOnce(message, 'closeclick', function () {
-								if (bounds.contains(geo.lastKnownPosition().toLatLng())) {
-									message.setContent(
-											"<p style=\"font-size:12pt\">" +
-											"I see you're already at the Dam. Great! " +
-											"<emph>Click</emph> on the play button in the top left corner of your screen to start the experience:" +
-											"</p>" +
-											"<div style=\"text-align: center;\"><img style=\"border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/run-all.png\"></div>" +
-											"<p style=\"font-size:12pt\">You can then hear the sounds of the Dam relative to your current position.</p>");
-								} else {
-									message.setContent(
-											"<p style=\"font-size:12pt\">" +
-											"<emph>Double click</emph> on an empty space on the map to simulate your presence there:" +
-											"</p>" +
-											"<div style=\"text-align: center\"><img src=\"img/marker-geomode-fake.png\"></div>" +
-											"<p style=\"font-size:12pt\">" +
-											"Then, <emph>click</emph> on the play button in the top left corner of your screen to start the experience:" +
-											"</p>" +
-											"<div style=\"text-align: center;\"><img style=\"border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/run-all.png\"></div>" +
-											"<p style=\"font-size:12pt\">You can then drag around the location marker to hear the sounds of the Dam relative to your current position.</p>");
-								}
-								message.open(controller.map());
+							gmaps.event.addDomListenerOnce(message, 'domready', function () {
+
+								$('.infoBox > .content').html(
+										"<img style=\"display: block;\" src=\"img/Gezicht-op-de-Dam.jpg\">" +
+										"<p style=\"font-size:12pt\">" +
+										"The Dam Square Experience is made possible by the NWO project " +
+										"<a style=\"font-size:12pt\" href=\"http://www.maastrichtsts.nl/?project=soundscapes-of-the-urban-past-staged-sound-as-mediated-cultural-heritage\">Soundscapes of the Urban Past</a>, " +
+										"performed by the <a style=\"font-size:12pt\" href=\"http://www.maastrichtsts.nl\">STS&nbsp;research&nbsp;group</a> of Maastricht University." +
+										"</p>");
+
+								$('.infoBox > .OK').one('click', $.proxy(message.close, message)).one('click', function () {
+
+									message.open(controller.map());
+
+									gmaps.event.addDomListenerOnce(message, 'domready', function () {
+
+										$('.infoBox > .OK').one('click', $.proxy(message.close, message));
+
+										if (bounds.contains(geo.lastKnownPosition().toLatLng())) {
+											$('.infoBox > .content').html(
+													"<p style=\"font-size:12pt\">" +
+													"I see you're already at the Dam. Great! " +
+													"<emph>Click</emph> on the play button in the top left corner of your screen to start the experience:" +
+													"</p>" +
+													"<div style=\"text-align: center;\"><img style=\"border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/run-all.png\"></div>" +
+													"<p style=\"font-size:12pt\">You can then hear the sounds of the Dam relative to your current position.</p>");
+										} else {
+											$('.infoBox > .content').html(
+													"<p style=\"font-size:12pt\">" +
+													"<emph>Double click</emph> on an empty space on the map to simulate your presence there:" +
+													"</p>" +
+													"<div style=\"text-align: center\"><img src=\"img/marker-geomode-fake.png\"></div>" +
+													"<p style=\"font-size:12pt\">" +
+													"Then, <emph>click</emph> on the play button in the top left corner of your screen to start the experience:" +
+													"</p>" +
+													"<div style=\"text-align: center;\"><img style=\"border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/run-all.png\"></div>" +
+													"<p style=\"font-size:12pt\">You can then drag around the location marker to hear the sounds of the Dam relative to your current position.</p>");
+										}
+									});
+
+								});
+
 							});
 						}
 					}
@@ -201,13 +223,18 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'geo'], function ($, gmaps, angular)
 
 
 			}
-		};
+
+
+//      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		};//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	}]);
+	}]);////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-});
+});/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

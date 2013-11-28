@@ -9,13 +9,16 @@ require.config({
 		'domReady'  : 'lib/requirejs-domready/domReady',
 		'async'     : 'lib/requirejs-plugins/src/async',
 		'jquery'    : 'lib/jquery/jquery',
-		'angular'   : 'lib/angular/angular'
+		'angular'   : 'lib/angular/angular',
+		'infobox'   : 'lib/google-maps-utility-library-v3/infobox/src/infobox'
 	},
 	shim : {
 		'polyfiller': ['jquery', 'modernizr'],
-		'angular'   : { exports: 'angular' }
+		'angular'   : { exports: 'angular' },
+		'infobox'   : { deps: ['gmaps'], exports: 'InfoBox' }
 	}
 });
+
 
 //// The Angular Talescape Modules to Load
 //
@@ -26,6 +29,7 @@ var TALESCAPE_ANGULAR_DIRECTIVES = [
 	'ts-user-pos-controls',
 	'ts-source-editor'
 ];
+
 
 //// Load javascript patches before anything else
 //
@@ -64,44 +68,4 @@ requirejs(['patches'], function () {
 	});
 
 });
-
-
-//// Test
-//
-/*
-requirejs(['jquery', 'domReady!'],
- function ( $      ){
-	console.info('Testing...');
-
-
-	$('div.test.A').click(function() {
-		console.debug("First play");
-		$('audio.test')[0].play();
-	});
-
-	$('div.test.B').click(function() {
-	});
-	setTimeout(function() {
-		console.debug("Real play 1");
-		$('audio.test')[0].src = "audio/cairnomount.mp3";
-		$('audio.test')[0].play();
-	}, 6000);
-	setTimeout(function() {
-		console.debug("Real play 2");
-		$('audio.test')[0].src = "audio/saewill.mp3";
-		$('audio.test')[0].play();
-	}, 12000);
-
-	$('audio.test').one('play', function() {
-		console.debug("First pause");
-		$('audio.test')[0].pause();
-	});
-
-
-
-	console.log('Done testing.');
-
-});
-*/
-
 
