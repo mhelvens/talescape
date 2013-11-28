@@ -18,11 +18,8 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map'], function ($, gmaps, angul
 
 
 //      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		return function (map) { //////////////////////////////////////////////////////////////////////////////
+		return function (map) { ////////////////////////////////////////////////////////////////////////////////////////
 //      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-			var result = {};
 
 
 			/////////////////////////////////
@@ -30,7 +27,7 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map'], function ($, gmaps, angul
 			//////                     //////
 
 
-			var _locationMarker = new gmaps.Marker({
+			var _positionMarker = new gmaps.Marker({
 				map: map,
 				title    : "You Are Here",
 				zIndex   : 999, // always on the foreground
@@ -39,7 +36,8 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map'], function ($, gmaps, angul
 				icon     : _icon('marker-geomode-real.png')
 			});
 
-			var _locationMarkerAccuracyCircle = new gmaps.Circle({
+
+			var _accuracyCircle = new gmaps.Circle({
 				map: map,
 				strokeColor  : '#4190da',
 				strokeOpacity: 0.8,
@@ -51,45 +49,43 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map'], function ($, gmaps, angul
 				clickable    : false
 			});
 
-			function _positionMarker(pos) {
-				_locationMarker.setPosition(pos.latLng);
-				_locationMarkerAccuracyCircle.setCenter(pos.latLng);
-				_locationMarkerAccuracyCircle.setRadius(parseFloat(pos.coords.accuracy));
+
+			function _placePositionMarker(pos) {
+				_positionMarker.setPosition(pos.toLatLng());
+				_accuracyCircle.setCenter(pos.toLatLng());
+				_accuracyCircle.setRadius(parseFloat(pos.coords.accuracy));
 				//// parseFloat is used above for testing purposes only;
 				//// The Chrome plugin to fake GPS location returns
 				//// a string from userPos.coords.accuracy
 			}
 
 
-			/////////////////////////////////////////
-			////// Interaction with the Marker //////
-			//////                             //////
+			//////////////////////////////////////////////////////////
+			////// Interaction with the Marker in Fake Geo-mode //////
+			//////                                              //////
 
 
-			var _userPosListenerIds = {};
 			geo.onModeToggle(function (mode) {
 				if (mode == geo.GEO_REAL) {
-					_locationMarkerAccuracyCircle.setVisible(true);
-					_locationMarker.setIcon(_icon('marker-geomode-real.png'));
-					_locationMarker.setDraggable(false);
-					gmaps.event.removeListener(_userPosListenerIds.drag);
-					gmaps.event.removeListener(_userPosListenerIds.mousedown);
-					gmaps.event.removeListener(_userPosListenerIds.mouseup);
+					_accuracyCircle.setVisible(true);
+					_positionMarker.setIcon(_icon('marker-geomode-real.png'));
+					_positionMarker.setDraggable(false);
+					gmaps.event.clearInstanceListeners(_positionMarker);
 				} else {
-					_locationMarkerAccuracyCircle.setVisible(false);
-					_locationMarker.setIcon(_icon('marker-geomode-fake.png'));
-					_locationMarker.setDraggable(true);
+					_accuracyCircle.setVisible(false);
+					_positionMarker.setIcon(_icon('marker-geomode-fake.png'));
+					_positionMarker.setDraggable(true);
 
-					_userPosListenerIds.drag = gmaps.event.addListener(_locationMarker, 'drag', function (dragEvent) {
+					gmaps.event.addListener(_positionMarker, 'drag', function (dragEvent) {
 						geo.setFakePosition(dragEvent.latLng.lat(), dragEvent.latLng.lng());
 					});
 
-					_userPosListenerIds.mousedown = gmaps.event.addListener(_locationMarker, 'mousedown', function () {
-						_locationMarker.setIcon(_icon('marker-geomode-fake-dragged.png'));
+					gmaps.event.addListener(_positionMarker, 'mousedown', function () {
+						_positionMarker.setIcon(_icon('marker-geomode-fake-dragged.png'));
 					});
 
-					_userPosListenerIds.mouseup = gmaps.event.addListener(_locationMarker, 'mouseup', function () {
-						_locationMarker.setIcon(_icon('marker-geomode-fake.png'));
+					gmaps.event.addListener(_positionMarker, 'mouseup', function () {
+						_positionMarker.setIcon(_icon('marker-geomode-fake.png'));
 					});
 				}
 			});
@@ -100,34 +96,11 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map'], function ($, gmaps, angul
 			//////                            //////
 
 
-			var _newPosCallbacks = $.Callbacks('unique');
-			var _lastKnownPos = geo.lastKnownPosition();
-
 			geo.watchPosition(function (userPos) {
-				if (_lastKnownPos.coords != userPos.coords) {
-					userPos.latLng = userPos.toLatLng();
-
-					_lastKnownPos = userPos;
-
-					_positionMarker(userPos);
-
-					_newPosCallbacks.fire(userPos);
-				}
+				_placePositionMarker(userPos);
 			}, function (error) {
 				console.error(error.message);
 			}, { enableHighAccuracy: true, maximumAge: 500});
-
-
-			////////////////////////////
-			////// Public methods //////
-			//////                //////
-
-
-			result.onNewPos = function (handler) { return _newPosCallbacks.add(handler); };
-
-			result.pos = function () { return _lastKnownPos; };
-
-			$.extend(this, result);
 
 
 //      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////

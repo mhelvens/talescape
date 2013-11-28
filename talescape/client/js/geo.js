@@ -31,11 +31,11 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular, TS) { 
 		///////////////////////////////
 
 
-		result.GEO_REAL = 'value: geo-real';
-		result.GEO_FAKE = 'value: geo-fake';
+		result.GEO_REAL = 'GEO_REAL';
+		result.GEO_FAKE = 'GEO_FAKE';
 
-		result.GEO_UNKNOWN = 'value: geo-unknown';
-		result.GEO_KNOWN = 'value: geo-known';
+		result.GEO_UNKNOWN = 'GEO_UNKNOWN';
+		result.GEO_KNOWN = 'GEO_KNOWN';
 
 		var _geoMode = result.GEO_REAL;
 		var _geoKnown = result.GEO_UNKNOWN;
@@ -48,21 +48,14 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular, TS) { 
 		var _watchers = [];
 
 		function _notifyWatchers() {
-			var i;
-			if (_geoMode == result.GEO_REAL) {
-				if (_lastRealPosition) {
-					for (i = 0; i < _geoWatchIdCount; ++i) {
-						if (_watchers[i]) {
-							_watchers[i].successCallback(_lastRealPosition);
-						}
+			var pos = (_geoMode == result.GEO_REAL) ? _lastRealPosition : _fakePosition;
+
+			if (pos) {
+				_watchers.map(function (watcher) {
+					if (watcher) {
+						watcher.successCallback(pos);
 					}
-				}
-			} else {
-				for (i = 0; i < _geoWatchIdCount; ++i) {
-					if (_watchers[i]) {
-						_watchers[i].successCallback(_fakePosition);
-					}
-				}
+				});
 			}
 		}
 
@@ -96,7 +89,8 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular, TS) { 
 		var _geoWatchIdToWatchId = [];
 
 		result.watchPosition = function (successCallback, errorCallback, options) {
-			var id = _geoWatchIdCount++;
+			var id = _geoWatchIdCount;
+			++_geoWatchIdCount;
 
 			$.webshims.ready('geolocation', function () {
 				_geoWatchIdToWatchId[id] = navigator.geolocation.watchPosition(
@@ -109,14 +103,18 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular, TS) { 
 							$rootScope.$apply(function () {
 								_geoKnown = result.GEO_KNOWN;
 								_lastRealPosition = position;
+								if (_geoMode == result.GEO_REAL) {
+									successCallback(position);
+								}
 							});
-							if (_geoMode == result.GEO_REAL) { successCallback(position); }
 						},
 						function (positionError) {
 							$rootScope.$apply(function () {
 								_geoKnown = result.GEO_UNKNOWN;
+								if (_geoMode == result.GEO_REAL) {
+									errorCallback(positionError);
+								}
 							});
-							if (_geoMode == result.GEO_REAL) { errorCallback(positionError); }
 						},
 						options);
 			});
@@ -136,20 +134,28 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular, TS) { 
 		result.clearWatch = function (geoWatchId) {
 			$.webshims.ready('geolocation', function () {
 				navigator.geolocation.clearWatch(_geoWatchIdToWatchId[geoWatchId]);
+				_watchers[geoWatchId] = null;
 			});
-			_watchers[geoWatchId] = null;
 		};
 
 
 		result.setFakePosition = function (lat, lng) {
 			_fakePosition = _latLngToFakePosition(lat, lng);
-			_notifyWatchers();
+			if (_geoMode == result.GEO_FAKE) {
+				_notifyWatchers();
+			}
 		};
 
 		result.lastKnownPosition = function () {
-			if (_geoMode == result.GEO_REAL) { return _lastRealPosition; }
-			else if (_fakePosition) { return _fakePosition; }
-			else { return result.DEFAULT_POSITION; }
+			if (_geoMode == result.GEO_REAL) {
+				return _lastRealPosition;
+			}
+			else if (_fakePosition) {
+				return _fakePosition;
+			}
+			else {
+				return result.DEFAULT_POSITION;
+			}
 		};
 
 
@@ -167,9 +173,15 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular, TS) { 
 		}
 
 		function _useFakeGeo(lat, lng) {
-			if (lat) { _fakePosition = _latLngToFakePosition(lat, lng); }
-			else if (_lastRealPosition) { _fakePosition = _lastRealPosition; }
-			else { _fakePosition = result.DEFAULT_POSITION; }
+			if (lat) {
+				_fakePosition = _latLngToFakePosition(lat, lng);
+			}
+			else if (_lastRealPosition) {
+				_fakePosition = _lastRealPosition;
+			}
+			else {
+				_fakePosition = result.DEFAULT_POSITION;
+			}
 
 			_geoMode = result.GEO_FAKE;
 			_notifyWatchers();
@@ -186,13 +198,21 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular, TS) { 
 		};
 
 		result.setMode = function (mode) {
-			if (mode == result.GEO_REAL) { _useRealGeo(); }
-			else { _useFakeGeo(); }
+			if (mode == result.GEO_REAL) {
+				_useRealGeo();
+			}
+			else {
+				_useFakeGeo();
+			}
 		};
 
 		result.toggleMode = function () {
-			if (_geoMode == result.GEO_FAKE) { _useRealGeo(); }
-			else { _useFakeGeo(); }
+			if (_geoMode == result.GEO_FAKE) {
+				_useRealGeo();
+			}
+			else {
+				_useFakeGeo();
+			}
 			_onModeToggleCallbacks.fire(result.mode());
 		};
 

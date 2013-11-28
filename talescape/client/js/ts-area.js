@@ -1,7 +1,7 @@
 'use strict';
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], function (gmaps, angular, tsMap, SoundSource, AudioPlayer) {
+define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS', 'geo'], function (gmaps, angular, tsMap, SoundSource, AudioPlayer) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -22,7 +22,7 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 
 
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	angular.module('TS').directive('tsArea', function () { /////////////////////////////////////////////////////////////
+	angular.module('TS').directive('tsArea', ['geo', function (geo) { //////////////////////////////////////////////////
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -64,39 +64,42 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 						attrs['invisible']);
 
 
-				////////////////////////////////
-				////// Calculating Volume //////
-				//////                    //////
+				////////////////////////////////////////////////
+				////// Processing Proximity with the User //////
+				//////                                    //////
 
 
 				var loudness = parseFloat(attrs['loudness']);
 
-				function processInteractionWithUser() {
-					var volume = 0;
+				function processInteractionWithUserPos() {
 
-					if (controller.userPos() && controller.userPos().latLng) {
-						var distance = gmaps.geometry.spherical.computeDistanceBetween(
-								sourceMarker.pos(),
-								controller.userPos().latLng
-						);
+					//// Calculate the distance between the two centers
+					//
+					var distance = gmaps.geometry.spherical.computeDistanceBetween(
+							sourceMarker.pos(),
+							geo.lastKnownPosition().toLatLng()
+					);
 
-						if (sourceMarker.reach() < distance) {
-							volume = 0;
-						}
-						else if (distance < sourceMarker.radius()) {
-							volume = 1;
-						}
-						else { // inbetween
-							volume = 1 - quadraticProgression(
-									sourceMarker.radius(),
-									sourceMarker.reach(),
-									distance);
-						}
+
+					//// Tell the source marker whether the user is within reach
+					//
+					sourceMarker.setUserWithinReach(distance <= sourceMarker.reach());
+
+
+					//// Set the audio volume
+					//
+					var volume = loudness;
+
+					if (sourceMarker.reach() < distance) {
+						volume *= 0;
+					} else if (distance < sourceMarker.radius()) {
+						volume *= 1;
+					} else { // (sourceMarker.radius() ≤ distance ≤ sourceMarker.reach())
+						volume *= 1 - quadraticProgression(
+								sourceMarker.radius(),
+								sourceMarker.reach(),
+								distance);
 					}
-
-					sourceMarker.setUserWithinReach(volume > 0);
-
-					volume *= loudness;
 
 					audioPlayer.setVolume(volume);
 				}
@@ -107,11 +110,11 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 				//////                            //////
 
 
-				processInteractionWithUser();
+				processInteractionWithUserPos();
 
-				controller.onNewUserPos(processInteractionWithUser);
+				geo.watchPosition(processInteractionWithUserPos);
 
-				sourceMarker.onNewPos(processInteractionWithUser);
+				sourceMarker.onNewPos(processInteractionWithUserPos);
 
 
 				///////////////////////
@@ -119,28 +122,28 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 				//////           //////
 
 
-				var object = {};
+				var result = {};
 
 
-				object.pos = sourceMarker.pos;
+				result.pos = sourceMarker.pos;
 
 				var _running = false;
 
-				object.running = function () {
+				result.running = function () {
 					return _running;
 				};
 
-				object.run = function () {
+				result.run = function () {
 					if (!_running) {
 						_running = true;
 						audioPlayer.loop();
 						sourceMarker.start();
-						window.setTimeout(processInteractionWithUser, 10);
+						window.setTimeout(processInteractionWithUserPos, 10);
 						_onRunCallback.fire();
 					}
 				};
 
-				object.pause = function () {
+				result.pause = function () {
 					if (_running) {
 						_running = false;
 						audioPlayer.pause();
@@ -149,26 +152,29 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 					}
 				};
 
-				object.toggle = function () {
-					if (_running) { object.pause(); }
-					else { object.run(); }
+				result.toggle = function () {
+					if (_running) {
+						result.pause();
+					} else {
+						result.run();
+					}
 				};
 
 				var _onRunCallback = $.Callbacks('unique');
 				var _onPauseCallback = $.Callbacks('unique');
 
-				object.onRun = function (handler) {
+				result.onRun = function (handler) {
 					_onRunCallback.add(handler);
 				};
 
-				object.onPause = function (handler) {
+				result.onPause = function (handler) {
 					_onPauseCallback.add(handler);
 				};
 
 				if (attrs['scenario'] !== undefined) {
 					controller.registerScenario(attrs['scenario']);
 				}
-				controller.registerSource(object, attrs['scenario']);
+				controller.registerSource(result, attrs['scenario']);
 
 
 				//////////////////////////////////////
@@ -177,7 +183,7 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 
 
 				sourceMarker.onClick(function () {
-					scope.$apply(object.toggle());
+					scope.$apply(result.toggle());
 				});
 
 			}
@@ -189,7 +195,7 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS'], funct
 
 
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	});/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	}]);/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
