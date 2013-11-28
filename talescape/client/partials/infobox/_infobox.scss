@@ -31,14 +31,14 @@ $info-box-padding : 10px;
 	}
 
 	& > .OK {
-		width       : 100%;
-		border      : none;
-		border-top  : solid black 1px;
-		background-color: $button-background-color;
-		text-align  : center;
-		margin      : 0px;
-		padding     : 5px;
-		font-weight : bold;
+		width            : 100%;
+		border           : none;
+		border-top       : solid black 1px;
+		background-color : $button-background-color;
+		text-align       : center;
+		margin           : 0px;
+		padding          : 5px;
+		font-weight      : bold;
 
 		&:hover {
 			background-color : $button-hover-background-color;
