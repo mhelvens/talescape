@@ -64,6 +64,7 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 					_pathTimer = window.setInterval(_takePathStep, PATH_STEP_TIME);
 				}
 				_mainCircle.setOptions({ fillColor: 'red', strokeColor: 'red' });
+				if (REACH_CIRCLE) { _reachCircle.setVisible(!_invisible); }
 			}
 		};
 
@@ -73,12 +74,13 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				_mainCircle.setOptions({ fillColor: 'green', strokeColor: 'green' });
 				if (ANIMATE) {
 					window.clearInterval(_aniTimer);
-					_aniCircle1.setOptions({ visible: false });
-					_aniCircle2.setOptions({ visible: false });
+					_aniCircle1.setVisible(false);
+					_aniCircle2.setVisible(false);
 				}
 				if (_encodedPath) {
 					window.clearInterval(_pathTimer);
 				}
+				if (REACH_CIRCLE) { _reachCircle.setVisible(false); }
 			}
 		};
 
@@ -199,7 +201,7 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				strokePosition: google.maps.INSIDE,
 				strokeWeight  : 4,
 				zIndex        : 1,
-				visible: !_invisible
+				visible       : !_invisible
 			});
 
 			_mainCircle = new google.maps.Circle(mainCircleOptions);
@@ -224,11 +226,11 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				var reachCircleOptions = $.extend({}, commonCircleOptions, {
 					clickable    : false,
 					fillOpacity  : 0,
-					strokeColor  : 'yellow',
-					strokeOpacity: 1,
+					strokeColor  : 'red',
+					strokeOpacity: .4,
 					strokeWeight : 1,
 					zIndex       : 3,
-					visible: !_invisible,
+					visible      : false,
 					radius       : _reach
 				});
 
@@ -282,7 +284,7 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				_aniCircle1.setOptions({
 					radius      : _radius + _zoomScale() * state1 * ANI_WAVE_SPEED,
 					strokeWeight: (ANI_CIRCLE_MAX_WIDTH - state1 * ANI_CIRCLE_MAX_WIDTH / ANI_HALT_STATE),
-					visible: (state1 < ANI_HALT_STATE) && !_invisible
+					visible     : (state1 < ANI_HALT_STATE) && !_invisible
 				});
 
 				var state2 = _animationState(ANI_SECOND_WAVE_DELAY);
@@ -294,7 +296,7 @@ define(['gmaps'], function () { ////////////////////////////////////////////////
 				_aniCircle2.setOptions({
 					radius      : _radius + _zoomScale() * state2 * ANI_WAVE_SPEED,
 					strokeWeight: (ANI_CIRCLE_MAX_WIDTH - state2 * ANI_CIRCLE_MAX_WIDTH / ANI_HALT_STATE),
-					visible: (state2 < ANI_HALT_STATE) && !_invisible
+					visible     : (state2 < ANI_HALT_STATE) && !_invisible
 				});
 			}
 		}
