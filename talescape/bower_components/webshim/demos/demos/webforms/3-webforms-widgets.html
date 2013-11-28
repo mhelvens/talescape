@@ -8,13 +8,13 @@
 	
 	<style>
 		
-		fieldset div {
+		fieldset div.form-element {
 			zoom: 1;
 			padding: 5px;
 			border: 1px solid #000;
 			margin: 5px 0;
 		}
-		fieldset div:after {
+		fieldset div.form-element:after {
 			content: " ";
 			display: block;
 			clear: both;
@@ -65,7 +65,7 @@
 	<!--
 		<script src="../../../src/polyfiller.js"></script> 
 		<script>
-			$.webshims.debug = 'noCombo';
+			webshims.setOptions('debug', 'noCombo');
 			//style calendar, datalist, validation bubble
 			//$('html').on('wspopoverbeforehide', false);
 		</script>
@@ -239,7 +239,7 @@ $('form').bind('firstinvalid', function(e){
 });
 </code>	
 
-			<h3 id="configure-ui">Changing locales for widgets</h3>
+			<h3 id="configure-locale">Changing locales for widgets</h3>
 <code class="block run-once">
 $.webshims.activeLang('en');
 </code>	
@@ -247,25 +247,34 @@ $.webshims.activeLang('en');
 $.webshims.activeLang('de');
 </code>	
 			<h3 id="configure-ui">Changing default-options for widgets</h3>
-			<p>All widgets can be changed with the <code>forms-ext.widgets</code> or <code>forms-ext[type]</code> options.</p>
+			<p>All widgets can be configured with the <code>forms-ext.widgets</code> or <code>forms-ext[type]</code> options.</p>
 <code class="block">
-$.webshims.setOptions({
-	wspopover: {
-		appendTo: 'element' //insert all popovers (datepicker, validationBubble, datalist after the associated element instead of the body)
-	}
-});
 $.webshims.setOptions('forms-ext', {
+	//general widgets options
 	widgets: {
 		calculateWidth: false
 	},
-	date: {
-		splitInput: true
-	},
+	//override for type month
 	month: {
+		startView: 1,
 		calculateWidth: true
+	},
+	date: {
+		startView: 2,
+		splitInput: true,
+		//open all date widget right to the input (needs jQuery UI position)
+		widgetPosition: {
+			my: 'left center',
+			at: "right center",
+			collision: "fit"
+		}
 	}
 });
-</code>	
+</code>
+			<p>inputs can be also configured using markup data-[type] attribute (Use JSON):</p>
+<code class="block">
+&lt;input type="date" data-date='{"showWeek": true}' /&gt;
+</code>
 			
 			<form class="input-widget" data-type="date" id="date-cfg">
 				<datalist id="date-list">
@@ -1016,6 +1025,7 @@ $.webshims.setOptions('forms-ext', {
 							<option></option>
 							<option value="time-list">time-list (predefined datalist)</option>
 						</select>
+					</label>
 				</fieldset>
 				<fieldset  data-method="data" data-name="time">
 					<legend>$.data</legend>
@@ -1134,9 +1144,10 @@ $.webshims.setOptions('forms-ext', {
 							<label for="states">
 								US States: <dfn title="required">*</dfn>
 							</label>
-							<input list="state-list" class="mark-option-text" name="states" required="required" type="text" id="states" />
+							<input list="state-list" class="mark-option-text value-completion" name="states" required="required" type="text" id="states" />
 							<datalist id="state-list">
 								<select>
+									
 									<option value="Alabama" label="State of Alabama" />
 									<option value="Alaska" label="State of Alaska" />
 									<option value="Arizona" label="State of Arizona" />
@@ -1209,9 +1220,9 @@ $.webshims.setOptions('forms-ext', {
 						</div>
 						<div class="form-element">
 							<label for="email">
-								E-Mail + datalist: <dfn title="required">*</dfn>
+								E-Mail + datalist + multiple: <dfn title="required">*</dfn>
 							</label>
-							<input list="datalist" name="email" required="required" type="email" id="email" />
+							<input list="datalist" name="email" multiple="" required="required" type="email" id="email" />
 							<datalist id="datalist">
 								<select>
 									<option value="yourmail@gmail.com"></option>

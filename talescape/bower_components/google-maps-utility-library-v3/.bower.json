@@ -1,0 +1,14 @@
+{
+  "name": "google-maps-utility-library-v3",
+  "homepage": "https://github.com/printercu/google-maps-utility-library-v3-read-only",
+  "_release": "master",
+  "_resolution": {
+    "type": "branch",
+    "branch": "master",
+    "commit": "9a68c7a256e627d324d3e82df55a2d6be3ae7685"
+  },
+  "_source": "git://github.com/printercu/google-maps-utility-library-v3-read-only.git",
+  "_target": "*",
+  "_originalSource": "google-maps-utility-library-v3",
+  "_direct": true
+}

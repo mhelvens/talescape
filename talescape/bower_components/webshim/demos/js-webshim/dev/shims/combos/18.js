@@ -1001,7 +1001,7 @@ webshims.register('form-number-date-api', function($, webshims, window, document
 						cache = {type: type};
 						if(!factor){
 							factor = 1;
-							webshims.info("you should always use a factor for stepUp/stepDown");
+							webshims.warn("you should always use a factor for stepUp/stepDown");
 						}
 						factor *= stepFactor;
 						
@@ -1037,13 +1037,11 @@ webshims.register('form-number-date-api', function($, webshims, window, document
 							webshims.info("max/min overflow can't apply stepUp/stepDown");
 							throw('invalid state error');
 						}
-						if(dateVal){
-							$.prop(this, 'valueAsDate', dateVal);
-						} else {
-							$.prop(this, 'valueAsNumber', val);
-						}
-					} else if(stepDescriptor.prop && stepDescriptor.prop.value){
-						return stepDescriptor.prop.value.apply(this, arguments);
+						
+						$.prop(this, 'valueAsNumber', val);
+						
+					} else if(stepDescriptor.prop && stepDescriptor.prop._supvalue){
+						return stepDescriptor.prop._supvalue.apply(this, arguments);
 					} else {
 						webshims.info("no step method for type: "+ type);
 						throw('invalid state error');
@@ -1410,9 +1408,9 @@ webshims.register('form-number-date-api', function($, webshims, window, document
 			var i;
 			
 			
-			this.element.addClass('ws-range').attr({role: 'slider'}).append('<span class="ws-range-min" /><span class="ws-range-rail"><span class="ws-range-thumb" /></span>');
-			this.trail = $('.ws-range-rail', this.element);
-			this.range = $('.ws-range-min', this.element);
+			this.element.addClass('ws-range').attr({role: 'slider'}).append('<span class="ws-range-min ws-range-progress" /><span class="ws-range-rail ws-range-track"><span class="ws-range-thumb" /></span>');
+			this.trail = $('.ws-range-track', this.element);
+			this.range = $('.ws-range-progress ', this.element);
 			this.thumb = $('.ws-range-thumb', this.trail);
 			
 			this.updateMetrics();
@@ -1422,6 +1420,7 @@ webshims.register('form-number-date-api', function($, webshims, window, document
 			for(i = 0; i < createOpts.length; i++){
 				this[createOpts[i]](this.options[createOpts[i]]);
 			}
+			
 			this.value = this._value;
 			this.value(this.options.value);
 			this.initDataList();
@@ -1448,8 +1447,11 @@ webshims.register('form-number-date-api', function($, webshims, window, document
 			
 			if(this._init && val == o.value && oVal == val){return;}
 			this.options.value = val;
-			this.thumb.stop();
-			this.range.stop();
+			
+			if($.fn.stop){
+				this.thumb.stop();
+				this.range.stop();
+			}
 			
 			rangeStyle[this.dirs.width] = left+'%';
 			if(this.vertical){
@@ -1458,7 +1460,7 @@ webshims.register('form-number-date-api', function($, webshims, window, document
 			thumbStyle[this.dirs.left] = left+'%';
 			
 			
-			if(!animate){
+			if(!animate || !$.fn.animate){
 				this.thumb.css(thumbStyle);
 				this.range.css(rangeStyle);
 			} else {
@@ -1660,7 +1662,7 @@ webshims.register('form-number-date-api', function($, webshims, window, document
 			}
 		},
 		addBindings: function(){
-			var leftOffset, widgetUnits, hasFocus;
+			var leftOffset, widgetUnits, hasFocus, isActive;
 			var that = this;
 			var o = this.options;
 			
@@ -1690,8 +1692,28 @@ webshims.register('form-number-date-api', function($, webshims, window, document
 					}
 				};
 			})();
-			
+			var normalizeTouch = (function(){
+				var types = {
+					touchstart: 1,
+					touchend: 1,
+					touchmove: 1
+				};
+				var normalize = ['pageX', 'pageY'];
+				return function(e){
+					if(types[e.type] && e.originalEvent && e.originalEvent.touches && e.originalEvent.touches.length){
+						for(var i = 0; i < normalize.length; i++){
+							e[normalize[i]] = e.originalEvent.touches[0][normalize[i]];
+						}
+						
+					}
+					return e;
+				};
+			})();
 			var setValueFromPos = function(e, animate){
+				if(e.type == 'touchmove'){
+					e.preventDefault();
+					normalizeTouch(e);
+				}
 				
 				var val = that.getStepedValueFromPos((e[that.dirs.mouse] - leftOffset) * widgetUnits);
 				if(val != o.value){
@@ -1708,41 +1730,55 @@ webshims.register('form-number-date-api', function($, webshims, window, document
 					eventTimer.call('change', o.value);
 				}
 				that.addRemoveClass('ws-active');
-				$(document).off('mousemove', setValueFromPos).off('mouseup', remove);
+				$(document).off('mousemove touchmove', setValueFromPos).off('mouseup touchend', remove);
 				$(window).off('blur', removeWin);
+				isActive = false;
 			};
 			var removeWin = function(e){
 				if(e.target == window){remove();}
 			};
 			var add = function(e){
 				var outerWidth;
+				
+				if(isActive || (e.type == 'touchstart' && (!e.originalEvent || !e.originalEvent.touches || e.originalEvent.touches.length != 1))){
+					return;
+				}
 				e.preventDefault();
-				$(document).off('mousemove', setValueFromPos).off('mouseup', remove);
+				
+				$(document).off('mousemove touchmove', setValueFromPos).off('mouseup touchend', remove);
 				$(window).off('blur', removeWin);
 				if(!o.readonly && !o.disabled){
-					that.element.focus();
+					normalizeTouch(e);
+					that.element.trigger('focus');
 					that.addRemoveClass('ws-active', true);
-					leftOffset = that.element.focus().offset();
+					leftOffset = that.element.offset();
 					widgetUnits = that.element[that.dirs.innerWidth]();
 					if(!widgetUnits || !leftOffset){return;}
 					outerWidth = that.thumb[that.dirs.outerWidth]();
 					leftOffset = leftOffset[that.dirs.pos];
 					widgetUnits = 100 / widgetUnits;
 					setValueFromPos(e, o.animate);
+					isActive = true;
 					$(document)
-						.on({
-							mouseup: remove,
-							mousemove: setValueFromPos
-						})
+						.on(e.type == 'touchstart' ?
+							{
+								touchend: remove,
+								touchmove: setValueFromPos
+							} :
+							{
+								mouseup: remove,
+								mousemove: setValueFromPos
+							}
+						)
 					;
 					$(window).on('blur', removeWin);
 					e.stopPropagation();
 				}
 			};
 			var elementEvts = {
-				mousedown: add,
+				'touchstart mousedown': add,
 				focus: function(e){
-					if(!o.disabled){
+					if(!o.disabled && !hasFocus){
 						eventTimer.init('input', o.value);
 						eventTimer.init('change', o.value);
 						that.addRemoveClass('ws-focus', true);
@@ -1805,6 +1841,20 @@ webshims.register('form-number-date-api', function($, webshims, window, document
 			this.thumb.on({
 				mousedown: add
 			});
+			
+			if(this.orig){
+				$(this.orig).jProp('form').on('reset', function(){
+					var val = $.prop(that.orig, 'value');
+					that.value(val);
+					setTimeout(function(){
+						var val2 = $.prop(that.orig, 'value');
+						if(val != val2){
+							that.value(val2);
+						}
+					}, 4);
+				});
+			}
+			
 			if (window.webshims) {
 				webshims.ready('WINDOWLOAD', function(){
 					webshims.ready('dom-support', function(){
@@ -1910,8 +1960,8 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 		var str;
 		return function(){
 			if(!str){
-				str = ('<option></option>')+$.map(monthDigits, function(val){
-					return '<option>'+val+'</option>';
+				str = ('<option value=""></option>')+$.map(monthDigits, function(val){
+					return '<option value="'+val+'"]>'+val+'</option>';
 				}).join('');
 			}
 			return str;
@@ -1933,7 +1983,7 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 					splits: [$('<input type="text" class="yy" size="4" inputmode="numeric" />')[0]] 
 				};
 				if(opts.monthSelect){
-					obj.splits.push($('<select class="mm">'+getMonthOptions()+'</select>')[0]);
+					obj.splits.push($('<select class="mm">'+getMonthOptions(opts)+'</select>')[0]);
 				} else {
 					obj.splits.push($('<input type="text" class="mm" inputmode="numeric" maxlength="2" size="2" />')[0]);
 				}
@@ -1968,7 +2018,7 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 					splits: [$('<input type="text" class="yy" inputmode="numeric" size="4" />')[0]] 
 				};
 				if(opts.monthSelect){
-					obj.splits.push($('<select class="mm ws-spin">'+getMonthOptions()+'</select>')[0]);
+					obj.splits.push($('<select class="mm ws-spin">'+getMonthOptions(opts)+'</select>')[0]);
 				} else {
 					obj.splits.push($('<input type="text" class="mm ws-spin" />')[0]);
 					if(opts.onlyMonthDigits){
@@ -2042,6 +2092,32 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 		return val.length == 1 ? '0'+val : val;
 	};
 	
+	var loadPicker = function(type, name){
+		type = (type == 'color' ? 'color' : 'forms')+'-picker';
+		if(!loadPicker[name+'Loaded'+type]){
+			loadPicker[name+'Loaded'+type] = true;
+			webshims.ready(name, function(){
+				webshims.loader.loadList([type]);
+				
+			});
+		}
+		return type;
+	};
+	
+
+	options.addZero = addZero;
+	webshims.loader.addModule('forms-picker', {
+		noAutoCallback: true,
+		options: options
+	});
+	webshims.loader.addModule('color-picker', {
+		noAutoCallback: true, 
+		css: 'jpicker/jpicker.css',
+		options: options,
+		d: ['forms-picker']
+	});
+	
+	options.steps = steps;
 		
 	(function(){
 		
@@ -2059,6 +2135,9 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 			},
 			month:  {
 				currentText: 'Aktueller Monat'
+			},
+			time:  {
+				currentText: 'Jetzt'
 			},
 			date: {
 				close: 'schließen',
@@ -2096,6 +2175,9 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 			meridian: ['AM', 'PM'],
 			month:  {
 				currentText: 'This month'
+			},
+			time: {
+				"currentText": "Now"
 			},
 			date: {
 				"closeText": "Done",
@@ -2148,7 +2230,7 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 				langCfg.date.monthDigits = monthDigits;
 				langCfg.numberSigns += '-';
 				if(langCfg.meridian){
-					langCfg.timeSigns += langCfg.meridian[0] + langCfg.meridian[1];
+					langCfg.timeSigns += langCfg.meridian[0] + langCfg.meridian[1] + langCfg.meridian[0].toLowerCase() + langCfg.meridian[1].toLowerCase();
 				}
 				$.each(langCfg.date.monthNames, create);
 				$.each(langCfg.date.monthNamesShort, create);
@@ -2159,48 +2241,38 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 			if(!langCfg['datetime-localSigns']){
 				langCfg['datetime-localSigns'] = langCfg.dateSigns+langCfg.timeSigns;
 			}
+			if(!langCfg['datetime-local']){
+				langCfg['datetime-local'] = {};
+			}
+			if(!langCfg.time){
+				langCfg.time = {};
+			}
+			if(!langCfg['datetime-local'].currentText && langCfg.time.currentText){
+				langCfg['datetime-local'].currentText = langCfg.time.currentText;
+			}
 		};
 		var triggerLocaleChange = function(){
 			processLangCFG(curCfg);
 			$(document).triggerHandler('wslocalechange');
 		};
 		
-		triggerLocaleChange();
 		
-		webshims.activeLang({
-			register: 'form-core',
-			callback: function(){
-				$.each(arguments, function(i, val){
-					if(formcfg[val]){
-						if(formcfg[val] != curCfg){
-							curCfg = formcfg[val];
-							triggerLocaleChange();
-						}
-						return false;
-					}
-				});
-			}
+		
+		
+		curCfg = webshims.activeLang(formcfg);
+		
+		triggerLocaleChange();
+			
+		$(formcfg).on('change', function(){
+			curCfg = formcfg.__active;
+			triggerLocaleChange();
 		});
-		webshims.activeLang({
-			langObj: formcfg, 
-			module: 'form-core',
-			callback: function(val){
-				if(curCfg != val){
-					curCfg = val;
-					triggerLocaleChange();
-				}
-			}
-		});
+		
 	})();
 		
 	
 	
 	(function(){
-		
-		
-		var mousePress = function(e){
-			$(this)[e.type == 'mousepressstart' ? 'addClass' : 'removeClass']('mousepress-ui');
-		};
 		
 		var retDefault = function(val, def){
 			if(!(typeof val == 'number' || (val && val == val * 1))){
@@ -2225,6 +2297,9 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 						
 					} else {
 						fVal = 0;
+					}
+					if(val[0] === '00'){ 
+						val[0] = '12';
 					}
 					val = $.trim(val.join(':')) + ' '+ curCfg.meridian[fVal];
 				}
@@ -2310,6 +2385,10 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 			time: function(val){
 				var fVal;
 				if(val && curCfg.meridian){
+					val = val.toUpperCase();
+					if(val.substr(0,2) === "12"){ 
+						val = "00" + val.substr(2);
+					}
 					if(val.indexOf(curCfg.meridian[1]) != -1){
 						val = val.split(':');
 						fVal = (val[0] * 1);
@@ -2395,7 +2474,10 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 				if(hintValue.length == 2){
 					hintValue = opts.splitInput ? 
 						hintValue : 
-						curCfg.patterns.d.replace('yy', hintValue[0]).replace('mm', hintValue[1]);
+						curCfg.date.showMonthAfterYear ?
+							hintValue[0] +' '+hintValue[1] :
+							
+							hintValue[1] +' '+ hintValue[0];
 				} else {
 					hintValue = opts.splitInput ?
 						[val, val] :
@@ -2527,292 +2609,32 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 				}
 			},
 			addBindings: function(){
-				var isFocused;
-				
 				var that = this;
 				var o = this.options;
-				
-				var eventTimer = (function(){
-					var events = {};
-					return {
-						init: function(name, curVal, fn){
-							if(!events[name]){
-								events[name] = {fn: fn};
-								$(that.orig).on(name, function(){
-									events[name].val = $.prop(that.orig, 'value');
-								});
-							}
-							events[name].val = curVal;
-						},
-						call: function(name, val){
-							if(events[name] && events[name].val != val){
-								clearTimeout(events[name].timer);
-								events[name].val = val;
-								events[name].timer = setTimeout(function(){
-									events[name].fn(val, that);
-								}, 9);
-							}
-						}
-					};
-				})();
-				var initChangeEvents = function(){
-					eventTimer.init('input', $.prop(that.orig, 'value'), that.options.input);
-					eventTimer.init('change', $.prop(that.orig, 'value'), that.options.change);
+				var run = function(){
+					that._addBindings();
 				};
-				
-				var step = {};
-				
-				var preventBlur = function(e){
-					if(preventBlur.prevent){
-						e.preventDefault();
-						(isFocused || that.element.getShadowFocusElement()).focus();
-						stopPropagation(e);
-						return true;
-					}
-				};
-				var callSplitChange = (function(){
-					var timer;
-					
-					var call = function(e){
-						var val;
-						clearTimeout(timer);
-						val = that.parseValue();
-						if(that.type == 'color'){
-							that.inputElements.val(val);
-						}
-						$.prop(that.orig, 'value', val);
-						eventTimer.call('input', val);
-						if(!e || e.type != 'wsupdatevalue'){
-							eventTimer.call('change', val);
-						}
-					};
-					
-					var onFocus = function(){
-						clearTimeout(timer);
-					};
-					var onBlur = function(e){
-						clearTimeout(timer);
-						timer = setTimeout(call, 0);
-						
-						if(e.type == 'change'){
-							stopPropagation(e);
-							if(!o.splitInput){
-								call();
-							}
-						}
-					};
-					
-					that.element.on('wsupdatevalue', call);
-					
-					that.inputElements
-						.add(that.buttonWrapper)
-						.add(that.element)
-						.on(
-							{
-								'focus focusin': onFocus,
-								'blur focusout change': onBlur
-							}
-						)
-					;
-					setTimeout(function(){
-						if(that.popover){
-							that.popover.element.on('wspopoverhide', onBlur);
-							$('> *', that.popover.element)
-								.on({
-									'focusin': onFocus,
-									'focusout': onBlur
-								})
-							;
-						}
-					}, 0);
-				})();
-				
-				var spinEvents = {};
-				var spinElement = o.splitInput ? this.inputElements.filter('.ws-spin') : this.inputElements.eq(0);
-				var elementEvts = {
-					blur: function(e){
-						if(!preventBlur(e) && !o.disabled && !o.readonly){
-							if(!preventBlur.prevent){
-								isFocused = false;
-							}
-						}
-						stopPropagation(e);
-					},
-					focus: function(e){
-						if(!isFocused){
-							initChangeEvents();
-							isFocused = this;
-						}
-					},
-					keypress: function(e){
-						if(e.isDefaultPrevented()){return;}
-						var chr;
-						var stepped = true;
-						var code = e.keyCode;
-						if(!e.ctrlKey && !e.metaKey && curCfg[that.type+'Signs']){
-							chr = String.fromCharCode(e.charCode == null ? code : e.charCode);
-							stepped = !(chr < " " || (curCfg[that.type+'Signs']+'0123456789').indexOf(chr) > -1);
-						} else {
-							stepped = false;
-						}
-						if(stepped){
-							e.preventDefault();
-						}
-					},
-					input: (this.type == 'color' && this.isValid) ? 
-						$.noop :
-						(function(){
-							var timer;
-							var check = function(){
-								var val = that.parseValue(true);
-								if(val && that.isValid(val)){
-									that.setInput(val);
-								}
-								
-							};
-							return function(){
-								clearTimeout(timer);
-								timer = setTimeout(check, 200);
-							};
-						})(),
-					'input keydown keypress': (function(){
-						var timer;
-						var isStopped = false;
-						var releaseTab = function(){
-							if(isStopped === true){
-								isStopped = 'semi';
-								timer = setTimeout(releaseTab, 250);
-							} else {
-								isStopped = false;
-							}
-						};
-						var stopTab = function(){
-							isStopped = true;
-							clearTimeout(timer);
-							timer = setTimeout(releaseTab, 300);
-						};
-						var select = function(){
-							var elem = this;
-							setTimeout(function(){
-								elem.focus();
-								elem.select();
-							}, 4);
-							
-							stopTab();
-						};
-						
-						return function(e){
-							if(o.splitInput && o.jumpInputs){
-								if(e.type == 'input'){
-									if($.prop(this, 'value').length === $.prop(this, 'maxLength')){
-										try {
-											$(this)
-												.next()
-												.next('input, select')
-												.each(select)
-											;
-										} catch(er){}
-									}
-								} else if(!e.shiftKey && !e.crtlKey && e.keyCode == 9 && (isStopped === true || (isStopped && !$.prop(this, 'value')))){
-									e.preventDefault();
-								}
-							}
-						};
-					})()
-				};
-				var mouseDownInit = function(){
-					if(!o.disabled && !isFocused){
-						that.element.getShadowFocusElement().focus();
-					}
-					preventBlur.set();
-					
-					return false;
-				};
-				
-				preventBlur.set = (function(){
-					var timer;
-					var reset = function(){
-						preventBlur.prevent = false;
-					};
-					return function(){
-						clearTimeout(timer);
-						preventBlur.prevent = true;
-						setTimeout(reset, 9);
-					};
-				})();
-				
-				
-				this.buttonWrapper.on('mousedown', mouseDownInit);
-				
-				this.setInput = function(value){
-					that.value(value);
-					eventTimer.call('input', value);
-				};
-				this.setChange = function(value){
-					that.setInput(value);
-					eventTimer.call('change', value);
-				};
-				
-				
-				
-				this.inputElements.on(elementEvts);
-				
-				if(steps[this.type]){
-					['stepUp', 'stepDown'].forEach(function(name){
-						step[name] = function(factor){
-							if(!o.disabled && !o.readonly){
-								if(!isFocused){
-									mouseDownInit();
-								}
-								var ret = false;
-								if (!factor) {
-									factor = 1;
-								}
-								try {
-									that.elemHelper[name](factor);
-									ret = that.elemHelper.prop('value');
-									that.value(ret);
-									eventTimer.call('input', ret);
-								} catch (er) {}
-								return ret;
-							}
-						};
-					});
-					if(!o.noSpinbtn){
-						spinEvents[$.fn.mwheelIntent ? 'mwheelIntent' : 'mousewheel'] = function(e, delta){
-							if(delta && isFocused && !o.disabled){
-								step[delta > 0 ? 'stepUp' : 'stepDown']();
-								e.preventDefault();
-							}
-						};
-						spinEvents.keydown = function(e){
-							if(o.list || e.isDefaultPrevented() || (e.altKey && e.keyCode == 40) || $.attr(this, 'list')){return;}
-							var stepped = true;
-							var code = e.keyCode;
-							if (code == 38) {
-								step.stepUp();
-							} else if (code == 40) {
-								step.stepDown();
-							} else {
-								stepped = false;
-							}
-							if(stepped){
-								e.preventDefault();
-							}
-						};
-						
-						spinElement.attr({'autocomplete': 'off', role: 'spinbutton'}).on(spinEvents);
-					}
-					$(this.buttonWrapper)
-						.on('mousepressstart mousepressend', '.step-up, .step-down', mousePress)
-						.on('mousedown mousepress', '.step-up', function(e){
-								step.stepUp();
-						})
-						.on('mousedown mousepress', '.step-down', function(e){
-								step.stepDown();
-						})
-					;
+				if(this._addBindings){
+					run();
+				} else {
+					webshims.ready('forms-picker', run);
+					loadPicker(this.type, 'WINDOWLOAD');
 				}
+				
+				this.inputElements
+					.add(this.buttonWrapper)
+					.add(this.element)
+					.one('mousedown focusin', function(e){
+						loadPicker(that.type, 'DOM');
+					})
+					.on({
+						'change input focus focusin blur focusout': function(e){
+							$(e.target).trigger('ws__'+e.type);
+						}
+					})
+					
+				;
+				
 				if(this.type != 'color'){
 					(function(){
 						var localeChange ;
@@ -2836,17 +2658,6 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 						$(that.orig).onWSOff('wslocalechange', localeChange);
 					})();
 				}
-				
-				initChangeEvents();
-			},
-			value: function(val, force){
-				if(!this._init || force || val !== this.options.value){
-					this.element.val(this.formatValue(val));
-					this.options.value = val;
-					this._propertyChange('value');
-					this.mirrorValidity();
-				}
-				
 			},
 			required: function(val, boolVal){
 				this.inputElements.attr({'aria-required': ''+boolVal});
@@ -2864,7 +2675,7 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 			formatValue: function(val, noSplit){
 				return formatVal[this.type](val, noSplit === false ? false : this.options);
 			},
-			createOpts: ['readonly', 'title', 'disabled', 'tabindex', 'placeholder', 'value', 'required'],
+			createOpts: ['readonly', 'title', 'disabled', 'tabindex', 'placeholder', 'defaultValue', 'value', 'required'],
 			placeholder: function(val){
 				var options = this.options;
 				options.placeholder = val;
@@ -2879,34 +2690,6 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 				} else {
 					this.element.prop('placeholder', placeholder);
 				}
-			},
-			initDataList: function(){
-				var listTimer;
-				var that = this;
-				var updateList = function(){
-					$(that.orig)
-						.jProp('list')
-						.off('updateDatalist', updateList)
-						.on('updateDatalist', updateList)
-					;
-					clearTimeout(listTimer);
-					listTimer = setTimeout(function(){
-						if(that.list){
-							that.list();
-						}
-					}, 9);
-					
-				};
-				
-				$(this.orig).onTrigger('listdatalistchange', updateList);
-			},
-			getOptions: function(){
-				var options = {};
-				var datalist = $(this.orig).jProp('list');
-				datalist.find('option').each(function(){
-					options[$.prop(this, 'value')] = $.prop(this, 'label');
-				});
-				return [options, datalist.data('label')];
 			},
 			list: function(val){
 				if(this.type == 'number'){
@@ -2934,6 +2717,16 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 			}
 		};
 		
+		['defaultValue', 'value'].forEach(function(name){
+			wsWidgetProto[name] = function(val, force){
+				if(!this._init || force || val !== this.options[name]){
+					this.element.prop(name, this.formatValue(val));
+					this.options[name] = val;
+					this._propertyChange(name);
+					this.mirrorValidity();
+				}
+			};
+		});
 		
 		['readonly', 'disabled'].forEach(function(name){
 			var isDisabled = name == 'disabled';
@@ -2987,7 +2780,7 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 				}
 				this._init = true;
 			},
-			createOpts: ['step', 'min', 'max', 'readonly', 'title', 'disabled', 'tabindex', 'placeholder', 'value', 'required'],
+			createOpts: ['step', 'min', 'max', 'readonly', 'title', 'disabled', 'tabindex', 'placeholder', 'defaultValue', 'value', 'required'],
 			_addSplitInputs: function(){
 				if(!this.inputElements){
 					var create = splitInputs[this.type]._create(this.options);
@@ -3027,37 +2820,50 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 					}, 9);
 				}
 			},
-			value: function(val, force){
-				
-				if(!this._init || force || this.options.value !== val){
-					this.valueAsNumber = this.asNumber(val);
-					this.options.value = val;
-					
-					if(isNaN(this.valueAsNumber) || (!isNaN(this.minAsNumber) && this.valueAsNumber < this.minAsNumber) || (!isNaN(this.maxAsNumber) && this.valueAsNumber > this.maxAsNumber)){
-						this._setStartInRange();
-					} else {
-						this.elemHelper.prop('value', val);
-						this.options.defValue = "";
-					}
-					
-					val = formatVal[this.type](val, this.options);
-					if(this.options.splitInput){
-						$.each(this.splits, function(i, elem){
-							$.prop(elem, 'value', val[i]);
-						});
-					} else {
-						this.element.prop('value', val);
-					}
-					this._propertyChange('value');
-					this.mirrorValidity();
-				}
-			},
 			step: function(val){
 				var defStep = steps[this.type];
 				this.options.step = val;
 				this.elemHelper.prop('step', retDefault(val, defStep.step));
 				this.mirrorValidity();
+			},
+			_beforeValue: function(val){
+				this.valueAsNumber = this.asNumber(val);
+				this.options.value = val;
+				
+				if(isNaN(this.valueAsNumber) || (!isNaN(this.minAsNumber) && this.valueAsNumber < this.minAsNumber) || (!isNaN(this.maxAsNumber) && this.valueAsNumber > this.maxAsNumber)){
+					this._setStartInRange();
+				} else {
+					this.elemHelper.prop('value', val);
+					this.options.defValue = "";
+				}
 			}
+		});
+		
+		['defaultValue', 'value'].forEach(function(name){
+			var isValue = name == 'value';
+			spinBtnProto[name] = function(val, force){
+				if(!this._init || force || this.options[name] !== val){
+					if(isValue){
+						this._beforeValue(val);
+					}
+					
+					val = formatVal[this.type](val, this.options);
+					if(this.options.splitInput){
+						$.each(this.splits, function(i, elem){
+							var setOption;
+							if(!(name in elem) && !isValue && $.nodeName(elem, 'select')){
+								$('option[value="'+ val[i] +'"]', elem).prop('defaultSelected', true);
+							} else {
+								$.prop(elem, name, val[i]);
+							}
+						});
+					} else {
+						this.element.prop(name, val);
+					}
+					this._propertyChange(name);
+					this.mirrorValidity();
+				}
+			};
 		});
 		
 		$.each({min: 1, max: -1}, function(name, factor){
@@ -3085,6 +2891,8 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 			});
 		};
 		
+		$.fn.wsBaseWidget.wsProto = wsWidgetProto;
+		
 		$.fn.spinbtnUI = function(opts){
 			opts = $.extend({
 				monthNames: 'monthNames',
@@ -3099,32 +2907,14 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 				}, opts);
 			});
 		};
+		
+		$.fn.spinbtnUI.wsProto = spinBtnProto;
+		
 	})();
 	
 	(function(){
 		var picker = {};
 
-		var loadPicker = function(type, name){
-			type = (type == 'color' ? 'color' : 'forms')+'-picker';
-			if(!loadPicker[name+'Loaded'+type]){
-				loadPicker[name+'Loaded'+type] = true;
-				webshims.ready(name, function(){
-					webshims.loader.loadList([type]);
-				});
-			}
-			return type;
-		};
-		options.addZero = addZero;
-		webshims.loader.addModule('forms-picker', {
-			noAutoCallback: true,
-			options: options
-		});
-		webshims.loader.addModule('color-picker', {
-			noAutoCallback: true, 
-			css: 'jpicker/jpicker.css',
-			options: options
-		});
-		
 		webshims.inlinePopover = {
 			_create: function(){
 				this.element = $('<div class="ws-inline-picker"><div class="ws-po-box" /></div>').data('wspopover', this);
@@ -3168,7 +2958,7 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 			cancel: function(val, popover, data){
 				if(!data.options.inlinePicker){
 					popover.stopOpen = true;
-					data.element.getShadowFocusElement().focus();
+					data.element.getShadowFocusElement().trigger('focus');
 					setTimeout(function(){
 						popover.stopOpen = false;
 					}, 9);
@@ -3257,9 +3047,12 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 		
 		picker._common = function(data){
 			var options = data.options;
-			var popover = webshims.objectCreate(options.inlinePicker ? webshims.inlinePopover : webshims.wsPopover, {}, {prepareFor: options.inlinePicker ? data.buttonWrapper : data.element, position: options.widgetPosition});
+			var popover = webshims.objectCreate(options.inlinePicker ? webshims.inlinePopover : webshims.wsPopover, {}, $.extend(options.popover || {}, {prepareFor: options.inlinePicker ? data.buttonWrapper : data.element}));
 			var opener = $('<button type="button" class="ws-popover-opener"><span /></button>').appendTo(data.buttonWrapper);
 			
+			if(options.widgetPosition){
+				webshims.error('options.widgetPosition was removed use options.popover.position instead');
+			}
 			
 			var showPickerContent = function(){
 				(picker[data.type].showPickerContent || picker.showPickerContent)(data, popover);
@@ -3411,7 +3204,6 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 			if(options.inlinePicker){
 				show();
 			}
-			loadPicker(data.type, 'WINDOWLOAD');
 		};
 		
 		picker.month = picker._common;
@@ -3427,7 +3219,7 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 				.find('.ws-color-indicator')
 			;
 			var showColor = function(){
-				colorIndicator.css({backgroundColor: $.prop(this, 'value') || '#000'})
+				colorIndicator.css({backgroundColor: $.prop(this, 'value') || '#000000'});
 			};
 			var showOpacity = (function(){
 				var timer;
@@ -3463,10 +3255,12 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 		var inputTypes = {
 			
 		};
+		var boolAttrs = {disabled: 1, required: 1, readonly: 1};
 		var copyProps = [
 			'disabled',
 			'readonly',
 			'value',
+			'defaultValue',
 			'min',
 			'max',
 			'step',
@@ -3484,14 +3278,18 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 				if(!stopCircular){
 					var shadowData = webshims.data(this, 'shadowData');
 					if(shadowData && shadowData.data && shadowData.nativeElement === this && shadowData.data[fnName]){
-						shadowData.data[fnName](val, boolVal);
+						if(boolAttrs[fnName]){
+							shadowData.data[fnName](val, boolVal);
+						} else {
+							shadowData.data[fnName](val);
+						}
 					}
 				}
 			});
 		});
 		
 		if(options.replaceUI && 'valueAsNumber' in document.createElement('input')){
-			var reflectFn = function(val){
+			var reflectFn = function(){
 				if(webshims.data(this, 'hasShadow')){
 					$.prop(this, 'value', $.prop(this, 'value'));
 				}
@@ -3499,6 +3297,20 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 			
 			webshims.onNodeNamesPropertyModify('input', 'valueAsNumber', reflectFn);
 			webshims.onNodeNamesPropertyModify('input', 'valueAsDate', reflectFn);
+			$.each({stepUp: 1, stepDown: -1}, function(name, stepFactor){
+				var stepDescriptor = webshims.defineNodeNameProperty('input', name, {
+					prop: {
+						value: function(){
+							var ret;
+							if(stepDescriptor.prop && stepDescriptor.prop._supvalue){
+								ret = stepDescriptor.prop._supvalue.apply(this, arguments);
+								reflectFn.apply(this, arguments);
+							}
+							return ret;
+						}
+					}
+				});
+			});
 		}
 		
 		var extendType = (function(){
@@ -3518,7 +3330,7 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 				$(data.orig).removeClass('ws-important-hide');
 				$.style( data.orig, 'display', '' );
 				var hasButtons, marginR, marginL;
-				var correctWidth = 0.6;
+				var correctWidth = 0.8;
 				if(!init || data.orig.offsetWidth){
 					hasButtons = data.buttonWrapper && data.buttonWrapper.filter(isVisible).length;
 					marginR = $.css( data.orig, 'marginRight');
@@ -3542,7 +3354,7 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 							;
 						} else {
 							data.buttonWrapper.css('marginRight', marginR);
-							correctWidth = data.buttonWrapper.outerWidth(true) + 0.6;
+							correctWidth = data.buttonWrapper.outerWidth(true) + correctWidth;
 						}
 					}
 					
@@ -3700,7 +3512,29 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 			});
 		}
 		
-		if(!modernizrInputTypes.range || options.replaceUI){
+		var replace = {};
+		
+		
+		if(options.replaceUI){
+			if( $.isPlainObject(options.replaceUI) ){
+				$.extend(replace, options.replaceUI);
+			} else {
+				$.extend(replace, {
+					'range': 1,
+					'number': 1,
+					'time': 1, 
+					'month': 1, 
+					'date': 1, 
+					'color': 1, 
+					'datetime-local': 1
+				});
+			}
+		}
+		if(modernizrInputTypes.number && navigator.userAgent.indexOf('Touch') == -1 && ((/MSIE 1[0|1]\.\d/.test(navigator.userAgent)) || (/Trident\/7\.0/.test(navigator.userAgent)))){
+			replace.number = 1;
+		}
+		
+		if(!modernizrInputTypes.range || replace.range){
 			extendType('range', {
 				_create: function(opts, set){
 					var data = $('<span />').insertAfter(opts.orig).rangeUI(opts).data('rangeUi');
@@ -3709,9 +3543,9 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 			});
 		}
 		
-		var isStupid = modernizrInputTypes.number && navigator.userAgent.indexOf('Touch') == -1 && ((/MSIE 1[0|1]\.\d/.test(navigator.userAgent)) || (/Trident\/7\.0/.test(navigator.userAgent)));
+		
 		['number', 'time', 'month', 'date', 'color', 'datetime-local'].forEach(function(name){
-			if(!modernizrInputTypes[name] || options.replaceUI || (name == 'number' && isStupid)){
+			if(!modernizrInputTypes[name] || replace[name]){
 				extendType(name, {
 					_create: function(opts, set){
 						if(opts.monthSelect){
@@ -3722,8 +3556,8 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 							opts.splitInput = false;
 						}
 						var markup = opts.splitInput ?
-								'<span class="ws-'+name+' ws-input" role="group"></span>' :
-								'<input class="ws-'+name+'" type="text" />';
+								'<span class="ws-'+name+' ws-input ws-inputreplace" role="group"></span>' :
+								'<input class="ws-'+name+' ws-inputreplace" type="text" />';
 						var data = $(markup).insertAfter(opts.orig);
 						if(steps[name]){
 							data = data.spinbtnUI(opts).data('wsWidget'+name);
@@ -3740,13 +3574,20 @@ webshims.register('form-number-date-ui', function($, webshims, window, document,
 			}
 		});
 		
+		var init =  function(){
+			webshims.addReady(function(context, contextElem){
+				$('input', context)
+					.add(contextElem.filter('input'))
+					.each(implementType)
+				;
+			});
+		};
+		if(formcfg._isLoading){
+			$(formcfg).one('change', init);
+		} else {
+			init();
+		}
 		
-		webshims.addReady(function(context, contextElem){
-			$('input', context)
-				.add(contextElem.filter('input'))
-				.each(implementType)
-			;
-		});
 	})();
 });
 

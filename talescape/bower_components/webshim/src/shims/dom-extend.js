@@ -1,20 +1,21 @@
 //DOM-Extension helper
-webshims.register('dom-extend', function($, webshims, window, document, undefined){
+webshims.register('dom-extend', function ($, webshims, window, document, undefined) {
 	"use strict";
 	var supportHrefNormalized = !('hrefNormalized' in $.support) || $.support.hrefNormalized;
 	var supportGetSetAttribute = !('getSetAttribute' in $.support) || $.support.getSetAttribute;
+	var has = Object.prototype.hasOwnProperty;
 	webshims.assumeARIA = supportGetSetAttribute || Modernizr.canvas || Modernizr.video || Modernizr.boxsizing;
-	
-	if($('<input type="email" />').attr('type') == 'text' || $('<form />').attr('novalidate') === "" || ('required' in $('<input />')[0].attributes)){
-		webshims.error("IE browser modes are busted in IE10. Please test your HTML/CSS/JS with a real IE version or at least IETester or similiar tools");
+
+	if ($('<input type="email" />').attr('type') == 'text' || $('<form />').attr('novalidate') === "" || ('required' in $('<input />')[0].attributes)) {
+		webshims.error("IE browser modes are busted in IE10+. Please test your HTML/CSS/JS with a real IE version or at least IETester or similiar tools");
 	}
-	
-	if(!$.parseHTML){
-		webshims.error("Webshims needs jQuery 1.8+ to work properly. Please update your jQuery version or downgrade webshims.");
+
+	if ('debug' in webshims) {
+		webshims.error('Use webshims.setOptions("debug", true||false||"noCombo"); to debug flag');
 	}
-	
+
 	if (!webshims.cfg.no$Switch) {
-		var switch$ = function(){
+		var switch$ = function () {
 			if (window.jQuery && (!window.$ || window.jQuery == window.$) && !window.jQuery.webshims) {
 				webshims.error("jQuery was included more than once. Make sure to include it only once or try the $.noConflict(extreme) feature! Webshims and other Plugins might not work properly. Or set webshims.cfg.no$Switch to 'true'.");
 				if (window.$) {
@@ -22,10 +23,10 @@ webshims.register('dom-extend', function($, webshims, window, document, undefine
 				}
 				window.jQuery = webshims.$;
 			}
-			if(webshims.M != Modernizr){
+			if (webshims.M != Modernizr) {
 				webshims.error("Modernizr was included more than once. Make sure to include it only once! Webshims and other scripts might not work properly.");
-				for(var i in Modernizr){
-					if(!(i in webshims.M)){
+				for (var i in Modernizr) {
+					if (!(i in webshims.M)) {
 						webshims.M[i] = Modernizr[i];
 					}
 				}
@@ -37,7 +38,7 @@ webshims.register('dom-extend', function($, webshims, window, document, undefine
 		webshims.ready('DOM', switch$);
 		$(switch$);
 		webshims.ready('WINDOWLOAD', switch$);
-		
+
 	}
 //	(function(){
 //		var hostNames = {
@@ -46,7 +47,7 @@ webshims.register('dom-extend', function($, webshims, window, document, undefine
 //			'127.0.0.1': 1
 //		};
 //		
-//		if( webshims.debug && (hostNames[location.hostname] || location.protocol == 'file:') ){
+//		if( webshims.cfg.debug && (hostNames[location.hostname] || location.protocol == 'file:') ){
 //			var list = $('<ul class="webshims-debug-list" />');
 //			webshims.errorLog.push = function(message){
 //				list.appendTo('body');
@@ -71,272 +72,313 @@ webshims.register('dom-extend', function($, webshims, window, document, undefine
 	//shortcus
 	var modules = webshims.modules;
 	var listReg = /\s*,\s*/;
-		
+
 	//proxying attribute
 	var olds = {};
 	var havePolyfill = {};
+	var hasPolyfillMethod = {};
 	var extendedProps = {};
 	var extendQ = {};
 	var modifyProps = {};
-	
+
 	var oldVal = $.fn.val;
-	var singleVal = function(elem, name, val, pass, _argless){
+	var singleVal = function (elem, name, val, pass, _argless) {
 		return (_argless) ? oldVal.call($(elem)) : oldVal.call($(elem), val);
 	};
-	
+
 	//jquery mobile and jquery ui
-	if(!$.widget){
-		(function(){
+	if (!$.widget) {
+		(function () {
 			var _cleanData = $.cleanData;
-			$.cleanData = function( elems ) {
-				if(!$.widget){
-					for ( var i = 0, elem; (elem = elems[i]) != null; i++ ) {
+			$.cleanData = function (elems) {
+				if (!$.widget) {
+					for (var i = 0, elem; (elem = elems[i]) != null; i++) {
 						try {
-							$( elem ).triggerHandler( "remove" );
-						// http://bugs.jquery.com/ticket/8235
-						} catch( e ) {}
+							$(elem).triggerHandler("remove");
+							// http://bugs.jquery.com/ticket/8235
+						} catch (e) {}
 					}
 				}
-				_cleanData( elems );
+				_cleanData(elems);
 			};
 		})();
 	}
-	
 
-	$.fn.val = function(val){
+
+	$.fn.val = function (val) {
 		var elem = this[0];
-		if(arguments.length && val == null){
+		if (arguments.length && val == null) {
 			val = '';
 		}
-		if(!arguments.length){
-			if(!elem || elem.nodeType !== 1){return oldVal.call(this);}
+		if (!arguments.length) {
+			if (!elem || elem.nodeType !== 1) {return oldVal.call(this);}
 			return $.prop(elem, 'value', val, 'val', true);
 		}
-		if($.isArray(val)){
+		if ($.isArray(val)) {
 			return oldVal.apply(this, arguments);
 		}
 		var isFunction = $.isFunction(val);
-		return this.each(function(i){
+		return this.each(function (i) {
 			elem = this;
-			if(elem.nodeType === 1){
-				if(isFunction){
-					var genVal = val.call( elem, i, $.prop(elem, 'value', undefined, 'val', true));
-					if(genVal == null){
+			if (elem.nodeType === 1) {
+				if (isFunction) {
+					var genVal = val.call(elem, i, $.prop(elem, 'value', undefined, 'val', true));
+					if (genVal == null) {
 						genVal = '';
 					}
-					$.prop(elem, 'value', genVal, 'val') ;
+					$.prop(elem, 'value', genVal, 'val');
 				} else {
 					$.prop(elem, 'value', val, 'val');
 				}
 			}
 		});
 	};
-	$.fn.onTrigger = function(evt, fn){
+	$.fn.onTrigger = function (evt, fn) {
 		return this.on(evt, fn).each(fn);
 	};
-	
-	$.fn.onWSOff = function(evt, fn, trigger, evtDel){
-		if(!evtDel){
+
+	$.fn.onWSOff = function (evt, fn, trigger, evtDel) {
+		if (!evtDel) {
 			evtDel = document;
 		}
 		$(evtDel)[trigger ? 'onTrigger' : 'on'](evt, fn);
-		this.on('remove', function(e){
-			if(!e.originalEvent){
+		this.on('remove', function (e) {
+			if (!e.originalEvent) {
 				$(evtDel).off(evt, fn);
 			}
 		});
 		return this;
 	};
-	
-	var dataID = '_webshimsLib'+ (Math.round(Math.random() * 1000));
-	var elementData = function(elem, key, val){
+
+	var dataID = '_webshimsLib' + (Math.round(Math.random() * 1000));
+	var elementData = function (elem, key, val) {
 		elem = elem.jquery ? elem[0] : elem;
-		if(!elem){return val || {};}
+		if (!elem) {return val || {};}
 		var data = $.data(elem, dataID);
-		if(val !== undefined){
-			if(!data){
+		if (val !== undefined) {
+			if (!data) {
 				data = $.data(elem, dataID, {});
 			}
-			if(key){
+			if (key) {
 				data[key] = val;
 			}
 		}
-		
+
 		return key ? data && data[key] : data;
 	};
 
 
-	[{name: 'getNativeElement', prop: 'nativeElement'}, {name: 'getShadowElement', prop: 'shadowElement'}, {name: 'getShadowFocusElement', prop: 'shadowFocusElement'}].forEach(function(data){
-		$.fn[data.name] = function(){
+	[
+		{name: 'getNativeElement', prop: 'nativeElement'},
+		{name: 'getShadowElement', prop: 'shadowElement'},
+		{name: 'getShadowFocusElement', prop: 'shadowFocusElement'}
+	].forEach(function (data) {
+		$.fn[data.name] = function () {
 			var elems = [];
-			this.each(function(){
+			this.each(function () {
 				var shadowData = elementData(this, 'shadowData');
 				var elem = shadowData && shadowData[data.prop] || this;
-				if($.inArray(elem, elems) == -1){
+				if ($.inArray(elem, elems) == -1) {
 					elems.push(elem);
 				}
 			});
 			return this.pushStack(elems);
 		};
 	});
-	
-	
-	['removeAttr', 'prop', 'attr'].forEach(function(type){
+
+	//add support for $('video').trigger('play') in case extendNative is set to false
+	if (!webshims.cfg.extendNative && !webshims.cfg.noTriggerOverride) {
+		(function (oldTrigger) {
+			$.event.trigger = function (event, data, elem, onlyHandlers) {
+
+				if (!hasPolyfillMethod[event] || onlyHandlers || !elem || elem.nodeType !== 1) {
+					return oldTrigger.apply(this, arguments);
+				}
+				var ret, isOrig, origName;
+				var origFn = elem[event];
+				var polyfilledFn = $.prop(elem, event);
+				var changeFn = polyfilledFn && origFn != polyfilledFn;
+				if (changeFn) {
+					origName = '__ws' + event;
+					isOrig = (event in elem) && has.call(elem, event);
+					elem[event] = polyfilledFn;
+					elem[origName] = origFn;
+				}
+
+				ret = oldTrigger.apply(this, arguments);
+				if (changeFn) {
+					if (isOrig) {
+						elem[event] = origFn;
+					} else {
+						delete elem[event];
+					}
+					delete elem[origName];
+				}
+
+				return ret;
+			};
+		})($.event.trigger);
+	}
+
+	['removeAttr', 'prop', 'attr'].forEach(function (type) {
 		olds[type] = $[type];
-		$[type] = function(elem, name, value, pass, _argless){
+		$[type] = function (elem, name, value, pass, _argless) {
 			var isVal = (pass == 'val');
 			var oldMethod = !isVal ? olds[type] : singleVal;
-			if( !elem || !havePolyfill[name] || elem.nodeType !== 1 || (!isVal && pass && type == 'attr' && $.attrFn[name]) ){
+			if (!elem || !havePolyfill[name] || elem.nodeType !== 1 || (!isVal && pass && type == 'attr' && $.attrFn[name])) {
 				return oldMethod(elem, name, value, pass, _argless);
 			}
-			
+
 			var nodeName = (elem.nodeName || '').toLowerCase();
 			var desc = extendedProps[nodeName];
 			var curType = (type == 'attr' && (value === false || value === null)) ? 'removeAttr' : type;
 			var propMethod;
 			var oldValMethod;
 			var ret;
-			
-			
-			if(!desc){
+
+
+			if (!desc) {
 				desc = extendedProps['*'];
 			}
-			if(desc){
+			if (desc) {
 				desc = desc[name];
 			}
-			
-			if(desc){
+
+			if (desc) {
 				propMethod = desc[curType];
 			}
-			
-			if(propMethod){
-				if(name == 'value'){
+
+			if (propMethod) {
+				if (name == 'value') {
 					oldValMethod = propMethod.isVal;
 					propMethod.isVal = isVal;
 				}
-				if(curType === 'removeAttr'){
-					return propMethod.value.call(elem);	
-				} else if(value === undefined){
-					return (propMethod.get) ? 
-						propMethod.get.call(elem) : 
-						propMethod.value
-					;
-				} else if(propMethod.set) {
-					if(type == 'attr' && value === true){
+				if (curType === 'removeAttr') {
+					return propMethod.value.call(elem);
+				} else if (value === undefined) {
+					return (propMethod.get) ?
+					       propMethod.get.call(elem) :
+					       propMethod.value
+							;
+				} else if (propMethod.set) {
+					if (type == 'attr' && value === true) {
 						value = name;
 					}
-					
+
 					ret = propMethod.set.call(elem, value);
 				}
-				if(name == 'value'){
+				if (name == 'value') {
 					propMethod.isVal = oldValMethod;
 				}
 			} else {
 				ret = oldMethod(elem, name, value, pass, _argless);
 			}
-			if((value !== undefined || curType === 'removeAttr') && modifyProps[nodeName] && modifyProps[nodeName][name]){
-				
+			if ((value !== undefined || curType === 'removeAttr') && modifyProps[nodeName] && modifyProps[nodeName][name]) {
+
 				var boolValue;
-				if(curType == 'removeAttr'){
+				if (curType == 'removeAttr') {
 					boolValue = false;
-				} else if(curType == 'prop'){
+				} else if (curType == 'prop') {
 					boolValue = !!(value);
 				} else {
 					boolValue = true;
 				}
-				
-				modifyProps[nodeName][name].forEach(function(fn){
-					if(!fn.only || (fn.only = 'prop' && type == 'prop') || (fn.only == 'attr' && type != 'prop')){
+
+				modifyProps[nodeName][name].forEach(function (fn) {
+					if (!fn.only || (fn.only = 'prop' && type == 'prop') || (fn.only == 'attr' && type != 'prop')) {
 						fn.call(elem, value, boolValue, (isVal) ? 'val' : curType, type);
 					}
 				});
 			}
 			return ret;
 		};
-		
-		extendQ[type] = function(nodeName, prop, desc){
-			
-			if(!extendedProps[nodeName]){
+
+		extendQ[type] = function (nodeName, prop, desc) {
+
+			if (!extendedProps[nodeName]) {
 				extendedProps[nodeName] = {};
 			}
-			if(!extendedProps[nodeName][prop]){
+			if (!extendedProps[nodeName][prop]) {
 				extendedProps[nodeName][prop] = {};
 			}
 			var oldDesc = extendedProps[nodeName][prop][type];
-			var getSup = function(propType, descriptor, oDesc){
-				if(descriptor && descriptor[propType]){
+			var getSup = function (propType, descriptor, oDesc) {
+				var origProp;
+				if (descriptor && descriptor[propType]) {
 					return descriptor[propType];
 				}
-				if(oDesc && oDesc[propType]){
+				if (oDesc && oDesc[propType]) {
 					return oDesc[propType];
 				}
-				if(type == 'prop' && prop == 'value'){
-					return function(value){
+				if (type == 'prop' && prop == 'value') {
+					return function (value) {
 						var elem = this;
-						return (desc.isVal) ? 
-							singleVal(elem, prop, value, false, (arguments.length === 0)) : 
-							olds[type](elem, prop, value)
-						;
+						return (desc.isVal) ?
+						       singleVal(elem, prop, value, false, (arguments.length === 0)) :
+						       olds[type](elem, prop, value)
+								;
 					};
 				}
-				if(type == 'prop' && propType == 'value' && desc.value.apply){
-					return  function(value){
-						var sup = olds[type](this, prop);
-						if(sup && sup.apply){
+				if (type == 'prop' && propType == 'value' && desc.value.apply) {
+					origProp = '__ws' + prop;
+					hasPolyfillMethod[prop] = true;
+					return  function (value) {
+						var sup = this[origProp] || olds[type](this, prop);
+						if (sup && sup.apply) {
 							sup = sup.apply(this, arguments);
-						} 
+						}
 						return sup;
 					};
 				}
-				return function(value){
+				return function (value) {
 					return olds[type](this, prop, value);
 				};
 			};
 			extendedProps[nodeName][prop][type] = desc;
-			if(desc.value === undefined){
-				if(!desc.set){
-					desc.set = desc.writeable ? 
-						getSup('set', desc, oldDesc) : 
-						(webshims.cfg.useStrict && prop == 'prop') ? 
-							function(){throw(prop +' is readonly on '+ nodeName);} : 
-							function(){webshims.info(prop +' is readonly on '+ nodeName);}
+			if (desc.value === undefined) {
+				if (!desc.set) {
+					desc.set = desc.writeable ?
+					           getSup('set', desc, oldDesc) :
+					           (webshims.cfg.useStrict && prop == 'prop') ?
+					           function () {throw(prop + ' is readonly on ' + nodeName);} :
+					           function () {webshims.info(prop + ' is readonly on ' + nodeName);}
 					;
 				}
-				if(!desc.get){
+				if (!desc.get) {
 					desc.get = getSup('get', desc, oldDesc);
 				}
-				
+
 			}
-			
-			['value', 'get', 'set'].forEach(function(descProp){
-				if(desc[descProp]){
-					desc['_sup'+descProp] = getSup(descProp, oldDesc);
+
+			['value', 'get', 'set'].forEach(function (descProp) {
+				if (desc[descProp]) {
+					desc['_sup' + descProp] = getSup(descProp, oldDesc);
 				}
 			});
 		};
-		
+
 	});
-	
-	var extendNativeValue = (function(){
+
+	var extendNativeValue = (function () {
 		var UNKNOWN = webshims.getPrototypeOf(document.createElement('foobar'));
-		var has = Object.prototype.hasOwnProperty;
+
 		//see also: https://github.com/lojjic/PIE/issues/40 | https://prototype.lighthouseapp.com/projects/8886/tickets/1107-ie8-fatal-crash-when-prototypejs-is-loaded-with-rounded-cornershtc
 		var isExtendNativeSave = Modernizr.advancedObjectProperties && Modernizr.objectAccessor;
-		return function(nodeName, prop, desc){
+		return function (nodeName, prop, desc) {
 			var elem , elemProto;
-			 if( isExtendNativeSave && (elem = document.createElement(nodeName)) && (elemProto = webshims.getPrototypeOf(elem)) && UNKNOWN !== elemProto && ( !elem[prop] || !has.call(elem, prop) ) ){
+			if (isExtendNativeSave && (elem = document.createElement(nodeName)) && (elemProto = webshims.getPrototypeOf(elem)) && UNKNOWN !== elemProto && ( !elem[prop] || !has.call(elem, prop) )) {
 				var sup = elem[prop];
-				desc._supvalue = function(){
-					if(sup && sup.apply){
+				desc._supvalue = function () {
+					if (sup && sup.apply) {
 						return sup.apply(this, arguments);
 					}
 					return sup;
 				};
 				elemProto[prop] = desc.value;
 			} else {
-				desc._supvalue = function(){
+				desc._supvalue = function () {
 					var data = elementData(this, 'propValue');
-					if(data && data[prop] && data[prop].apply){
+					if (data && data[prop] && data[prop].apply) {
 						return data[prop].apply(this, arguments);
 					}
 					return data && data[prop];
@@ -346,74 +388,74 @@ webshims.register('dom-extend', function($, webshims, window, document, undefine
 			desc.value._supvalue = desc._supvalue;
 		};
 	})();
-		
-	var initProp = (function(){
-		
+
+	var initProp = (function () {
+
 		var initProps = {};
-		
-		webshims.addReady(function(context, contextElem){
+
+		webshims.addReady(function (context, contextElem) {
 			var nodeNameCache = {};
-			var getElementsByName = function(name){
-				if(!nodeNameCache[name]){
+			var getElementsByName = function (name) {
+				if (!nodeNameCache[name]) {
 					nodeNameCache[name] = $(context.getElementsByTagName(name));
-					if(contextElem[0] && $.nodeName(contextElem[0], name)){
+					if (contextElem[0] && $.nodeName(contextElem[0], name)) {
 						nodeNameCache[name] = nodeNameCache[name].add(contextElem);
 					}
 				}
 			};
-			
-			
-			$.each(initProps, function(name, fns){
+
+
+			$.each(initProps, function (name, fns) {
 				getElementsByName(name);
-				if(!fns || !fns.forEach){
-					webshims.warn('Error: with '+ name +'-property. methods: '+ fns);
+				if (!fns || !fns.forEach) {
+					webshims.warn('Error: with ' + name + '-property. methods: ' + fns);
 					return;
 				}
-				fns.forEach(function(fn){
+				fns.forEach(function (fn) {
 					nodeNameCache[name].each(fn);
 				});
 			});
 			nodeNameCache = null;
 		});
-		
+
 		var tempCache;
 		var emptyQ = $([]);
-		var createNodeNameInit = function(nodeName, fn){
-			if(!initProps[nodeName]){
+		var createNodeNameInit = function (nodeName, fn) {
+			if (!initProps[nodeName]) {
 				initProps[nodeName] = [fn];
 			} else {
 				initProps[nodeName].push(fn);
 			}
-			if($.isDOMReady){
-				(tempCache || $( document.getElementsByTagName(nodeName) )).each(fn);
+			if ($.isDOMReady) {
+				(tempCache || $(document.getElementsByTagName(nodeName))).each(fn);
 			}
 		};
-		
+
 		var elementExtends = {};
 		return {
-			createTmpCache: function(nodeName){
-				if($.isDOMReady){
-					tempCache = tempCache || $( document.getElementsByTagName(nodeName) );
+			createTmpCache: function (nodeName) {
+				if ($.isDOMReady) {
+					tempCache = tempCache || $(document.getElementsByTagName(nodeName));
 				}
 				return tempCache || emptyQ;
 			},
-			flushTmpCache: function(){
+			flushTmpCache : function () {
 				tempCache = null;
 			},
-			content: function(nodeName, prop){
-				createNodeNameInit(nodeName, function(){
-					var val =  $.attr(this, prop);
-					if(val != null){
+			content       : function (nodeName, prop) {
+				createNodeNameInit(nodeName, function () {
+					var val = $.attr(this, prop);
+					if (val != null) {
 						$.attr(this, prop, val);
 					}
 				});
 			},
-			createElement: function(nodeName, fn){
+			createElement : function (nodeName, fn) {
 				createNodeNameInit(nodeName, fn);
 			},
-			extendValue: function(nodeName, prop, value){
-				createNodeNameInit(nodeName, function(){
-					$(this).each(function(){
+			extendValue   : function (nodeName, prop, value) {
+				createNodeNameInit(nodeName, function () {
+					$(this).each(function () {
 						var data = elementData(this, 'propValue', {});
 						data[prop] = this[prop];
 						this[prop] = value;
@@ -422,135 +464,134 @@ webshims.register('dom-extend', function($, webshims, window, document, undefine
 			}
 		};
 	})();
-		
-	var createPropDefault = function(descs, removeType){
-		if(descs.defaultValue === undefined){
+
+	var createPropDefault = function (descs, removeType) {
+		if (descs.defaultValue === undefined) {
 			descs.defaultValue = '';
 		}
-		if(!descs.removeAttr){
+		if (!descs.removeAttr) {
 			descs.removeAttr = {
-				value: function(){
+				value: function () {
 					descs[removeType || 'prop'].set.call(this, descs.defaultValue);
 					descs.removeAttr._supvalue.call(this);
 				}
 			};
 		}
-		if(!descs.attr){
+		if (!descs.attr) {
 			descs.attr = {};
 		}
 	};
-	
-	$.extend(webshims, {
 
-		getID: (function(){
+	$.extend(webshims, {
+		getID                 : (function () {
 			var ID = new Date().getTime();
-			return function(elem){
+			return function (elem) {
 				elem = $(elem);
 				var id = elem.prop('id');
-				if(!id){
+				if (!id) {
 					ID++;
-					id = 'ID-'+ ID;
+					id = 'ID-' + ID;
 					elem.eq(0).prop('id', id);
 				}
 				return id;
 			};
 		})(),
-		implement: function(elem, type){
+		implement             : function (elem, type) {
 			var data = elementData(elem, 'implemented') || elementData(elem, 'implemented', {});
-			if(data[type]){
-				webshims.warn(type +' already implemented for element #'+elem.id);
+			if (data[type]) {
+				webshims.warn(type + ' already implemented for element #' + elem.id);
 				return false;
 			}
 			data[type] = true;
 			return true;
 		},
-		extendUNDEFProp: function(obj, props){
-			$.each(props, function(name, prop){
-				if( !(name in obj) ){
+		extendUNDEFProp       : function (obj, props) {
+			$.each(props, function (name, prop) {
+				if (!(name in obj)) {
 					obj[name] = prop;
 				}
 			});
 		},
 		//http://www.w3.org/TR/html5/common-dom-interfaces.html#reflect
-		createPropDefault: createPropDefault,
-		data: elementData,
-		moveToFirstEvent: function(elem, eventType, bindType){
+		createPropDefault     : createPropDefault,
+		data                  : elementData,
+		moveToFirstEvent      : function (elem, eventType, bindType) {
 			var events = ($._data(elem, 'events') || {})[eventType];
 			var fn;
-			
-			if(events && events.length > 1){
+
+			if (events && events.length > 1) {
 				fn = events.pop();
-				if(!bindType){
+				if (!bindType) {
 					bindType = 'bind';
 				}
-				if(bindType == 'bind' && events.delegateCount){
-					events.splice( events.delegateCount, 0, fn);
+				if (bindType == 'bind' && events.delegateCount) {
+					events.splice(events.delegateCount, 0, fn);
 				} else {
-					events.unshift( fn );
+					events.unshift(fn);
 				}
-				
-				
+
+
 			}
 			elem = null;
 		},
-		addShadowDom: (function(){
+		addShadowDom          : (function () {
 			var resizeTimer;
 			var lastHeight;
 			var lastWidth;
-			
+
 			var docObserve = {
-				init: false,
-				runs: 0,
-				test: function(){
+				init   : false,
+				runs   : 0,
+				test   : function () {
 					var height = docObserve.getHeight();
 					var width = docObserve.getWidth();
-					
-					if(height != docObserve.height || width != docObserve.width){
+
+					if (height != docObserve.height || width != docObserve.width) {
 						docObserve.height = height;
 						docObserve.width = width;
 						docObserve.handler({type: 'docresize'});
 						docObserve.runs++;
-						if(docObserve.runs < 9){
+						if (docObserve.runs < 9) {
 							setTimeout(docObserve.test, 90);
 						}
 					} else {
 						docObserve.runs = 0;
 					}
 				},
-				handler: function(e){
+				handler: function (e) {
 					clearTimeout(resizeTimer);
-					resizeTimer = setTimeout(function(){
-						if(e.type == 'resize'){
+					resizeTimer = setTimeout(function () {
+						if (e.type == 'resize') {
 							var width = $(window).width();
 							var height = $(window).width();
-							if(height == lastHeight && width == lastWidth){
+							if (height == lastHeight && width == lastWidth) {
 								return;
 							}
 							lastHeight = height;
 							lastWidth = width;
-							
+
 							docObserve.height = docObserve.getHeight();
 							docObserve.width = docObserve.getWidth();
-							
+
 						}
 						$(document).triggerHandler('updateshadowdom');
 					}, (e.type == 'resize') ? 50 : 9);
 				},
-				_create: function(){
-					$.each({ Height: "getHeight", Width: "getWidth" }, function(name, type){
+				_create: function () {
+					$.each({ Height: "getHeight", Width: "getWidth" }, function (name, type) {
 						var body = document.body;
 						var doc = document.documentElement;
-						docObserve[type] = function(){
+						docObserve[type] = function () {
 							return Math.max(
-								body[ "scroll" + name ], doc[ "scroll" + name ],
-								body[ "offset" + name ], doc[ "offset" + name ],
-								doc[ "client" + name ]
+									body[ "scroll" + name ], doc[ "scroll" + name ],
+									body[ "offset" + name ], doc[ "offset" + name ],
+									doc[ "client" + name ]
 							);
 						};
 					});
 				},
-				start: function(){
-					if(!this.init && document.body){
+				start  : function () {
+					if (!this.init && document.body) {
 						this.init = true;
 						this._create();
 						this.height = docObserve.getHeight();
@@ -559,73 +600,80 @@ webshims.register('dom-extend', function($, webshims, window, document, undefine
 						$(this.test);
 						webshims.ready('WINDOWLOAD', this.test);
 						$(document).on('updatelayout', this.handler);
-						$(window).bind('resize', this.handler);
-						(function(){
+						$(window).on('resize', this.handler);
+						(function () {
 							var oldAnimate = $.fn.animate;
 							var animationTimer;
-							
-							$.fn.animate = function(){
+
+							$.fn.animate = function () {
 								clearTimeout(animationTimer);
-								animationTimer = setTimeout(function(){
+								animationTimer = setTimeout(function () {
 									docObserve.test();
 								}, 99);
-								
+
 								return oldAnimate.apply(this, arguments);
 							};
 						})();
 					}
 				}
 			};
-			
-			
-			webshims.docObserve = function(){
-				webshims.ready('DOM', function(){
+
+
+			webshims.docObserve = function () {
+				webshims.ready('DOM', function () {
 					docObserve.start();
+					if ($.support.boxSizing == null) {
+						$(function () {
+							if ($.support.boxSizing) {
+								docObserve.handler({type: 'boxsizing'});
+							}
+						});
+					}
 				});
 			};
-			return function(nativeElem, shadowElem, opts){
-				if(nativeElem && shadowElem){
+			return function (nativeElem, shadowElem, opts) {
+				if (nativeElem && shadowElem) {
 					opts = opts || {};
-					if(nativeElem.jquery){
+					if (nativeElem.jquery) {
 						nativeElem = nativeElem[0];
 					}
-					if(shadowElem.jquery){
+					if (shadowElem.jquery) {
 						shadowElem = shadowElem[0];
 					}
 					var nativeData = $.data(nativeElem, dataID) || $.data(nativeElem, dataID, {});
 					var shadowData = $.data(shadowElem, dataID) || $.data(shadowElem, dataID, {});
 					var shadowFocusElementData = {};
-					if(!opts.shadowFocusElement){
+					if (!opts.shadowFocusElement) {
 						opts.shadowFocusElement = shadowElem;
-					} else if(opts.shadowFocusElement){
-						if(opts.shadowFocusElement.jquery){
+					} else if (opts.shadowFocusElement) {
+						if (opts.shadowFocusElement.jquery) {
 							opts.shadowFocusElement = opts.shadowFocusElement[0];
 						}
 						shadowFocusElementData = $.data(opts.shadowFocusElement, dataID) || $.data(opts.shadowFocusElement, dataID, shadowFocusElementData);
 					}
-					
-					$(nativeElem).on('remove', function(e){
+
+					$(nativeElem).on('remove', function (e) {
 						if (!e.originalEvent) {
-							setTimeout(function(){
+							setTimeout(function () {
 								$(shadowElem).remove();
 							}, 4);
 						}
 					});
-					
+
 					nativeData.hasShadow = shadowElem;
 					shadowFocusElementData.nativeElement = shadowData.nativeElement = nativeElem;
 					shadowFocusElementData.shadowData = shadowData.shadowData = nativeData.shadowData = {
-						nativeElement: nativeElem,
-						shadowElement: shadowElem,
+						nativeElement     : nativeElem,
+						shadowElement     : shadowElem,
 						shadowFocusElement: opts.shadowFocusElement
 					};
-					if(opts.shadowChilds){
-						opts.shadowChilds.each(function(){
+					if (opts.shadowChilds) {
+						opts.shadowChilds.each(function () {
 							elementData(this, 'shadowData', shadowData.shadowData);
 						});
 					}
-					
-					if(opts.data){
+
+					if (opts.data) {
 						shadowFocusElementData.shadowData.data = shadowData.shadowData.data = nativeData.shadowData.data = opts.data;
 					}
 					opts = null;
@@ -633,60 +681,60 @@ webshims.register('dom-extend', function($, webshims, window, document, undefine
 				webshims.docObserve();
 			};
 		})(),
-		propTypes: {
-			standard: function(descs, name){
+		propTypes             : {
+			standard  : function (descs, name) {
 				createPropDefault(descs);
-				if(descs.prop){return;}
+				if (descs.prop) {return;}
 				descs.prop = {
-					set: function(val){
-						descs.attr.set.call(this, ''+val);
+					set: function (val) {
+						descs.attr.set.call(this, '' + val);
 					},
-					get: function(){
+					get: function () {
 						return descs.attr.get.call(this) || descs.defaultValue;
 					}
 				};
-				
+
 			},
-			"boolean": function(descs, name){
-				
+			"boolean" : function (descs, name) {
+
 				createPropDefault(descs);
-				if(descs.prop){return;}
+				if (descs.prop) {return;}
 				descs.prop = {
-					set: function(val){
-						if(val){
+					set: function (val) {
+						if (val) {
 							descs.attr.set.call(this, "");
 						} else {
 							descs.removeAttr.value.call(this);
 						}
 					},
-					get: function(){
+					get: function () {
 						return descs.attr.get.call(this) != null;
 					}
 				};
 			},
-			"src": (function(){
+			"src"     : (function () {
 				var anchor = document.createElement('a');
 				anchor.style.display = "none";
-				return function(descs, name){
-					
+				return function (descs, name) {
+
 					createPropDefault(descs);
-					if(descs.prop){return;}
+					if (descs.prop) {return;}
 					descs.prop = {
-						set: function(val){
+						set: function (val) {
 							descs.attr.set.call(this, val);
 						},
-						get: function(){
+						get: function () {
 							var href = this.getAttribute(name);
 							var ret;
-							if(href == null){return '';}
-							
-							anchor.setAttribute('href', href+'' );
-							
-							if(!supportHrefNormalized){
+							if (href == null) {return '';}
+
+							anchor.setAttribute('href', href + '');
+
+							if (!supportHrefNormalized) {
 								try {
 									$(anchor).insertAfter(this);
 									ret = anchor.getAttribute('href', 4);
-								} catch(er){
+								} catch (er) {
 									ret = anchor.getAttribute('href', 4);
 								}
 								$(anchor).detach();
@@ -696,89 +744,94 @@ webshims.register('dom-extend', function($, webshims, window, document, undefine
 					};
 				};
 			})(),
-			enumarated: function(descs, name){
-					
-					createPropDefault(descs);
-					if(descs.prop){return;}
-					descs.prop = {
-						set: function(val){
-							descs.attr.set.call(this, val);
-						},
-						get: function(){
-							var val = (descs.attr.get.call(this) || '').toLowerCase();
-							if(!val || descs.limitedTo.indexOf(val) == -1){
-								val = descs.defaultValue;
-							}
-							return val;
+			enumarated: function (descs, name) {
+
+				createPropDefault(descs);
+				if (descs.prop) {return;}
+				descs.prop = {
+					set: function (val) {
+						descs.attr.set.call(this, val);
+					},
+					get: function () {
+						var val = (descs.attr.get.call(this) || '').toLowerCase();
+						if (!val || descs.limitedTo.indexOf(val) == -1) {
+							val = descs.defaultValue;
 						}
-					};
-				}
-			
+						return val;
+					}
+				};
+			}
+
 //			,unsignedLong: $.noop
 //			,"doubble": $.noop
 //			,"long": $.noop
 //			,tokenlist: $.noop
 //			,settableTokenlist: $.noop
 		},
-		reflectProperties: function(nodeNames, props){
-			if(typeof props == 'string'){
+		reflectProperties     : function (nodeNames, props) {
+			if (typeof props == 'string') {
 				props = props.split(listReg);
 			}
-			props.forEach(function(prop){
+			props.forEach(function (prop) {
 				webshims.defineNodeNamesProperty(nodeNames, prop, {
 					prop: {
-						set: function(val){
+						set: function (val) {
 							$.attr(this, prop, val);
 						},
-						get: function(){
+						get: function () {
 							return $.attr(this, prop) || '';
 						}
 					}
 				});
 			});
 		},
-		defineNodeNameProperty: function(nodeName, prop, descs){
+		defineNodeNameProperty: function (nodeName, prop, descs) {
 			havePolyfill[prop] = true;
-						
-			if(descs.reflect){
-				webshims.propTypes[descs.propType || 'standard'](descs, prop);
+
+			if (descs.reflect) {
+				if (descs.propType && !webshims.propTypes[descs.propType]) {
+					webshims.error('could not finde propType ' + descs.propType);
+				} else {
+					webshims.propTypes[descs.propType || 'standard'](descs, prop);
+				}
+
 			}
-			
-			['prop', 'attr', 'removeAttr'].forEach(function(type){
+
+			['prop', 'attr', 'removeAttr'].forEach(function (type) {
 				var desc = descs[type];
-				if(desc){
-					if(type === 'prop'){
+				if (desc) {
+					if (type === 'prop') {
 						desc = $.extend({writeable: true}, desc);
 					} else {
 						desc = $.extend({}, desc, {writeable: true});
 					}
-						
+
 					extendQ[type](nodeName, prop, desc);
-					if(nodeName != '*' && webshims.cfg.extendNative && type == 'prop' && desc.value && $.isFunction(desc.value)){
+					if (nodeName != '*' && webshims.cfg.extendNative && type == 'prop' && desc.value && $.isFunction(desc.value)) {
 						extendNativeValue(nodeName, prop, desc);
 					}
 					descs[type] = desc;
 				}
 			});
-			if(descs.initAttr){
+			if (descs.initAttr) {
 				initProp.content(nodeName, prop);
 			}
 			return descs;
 		},
-		
-		defineNodeNameProperties: function(name, descs, propType, _noTmpCache){
+
+		defineNodeNameProperties: function (name, descs, propType, _noTmpCache) {
 			var olddesc;
-			for(var prop in descs){
-				if(!_noTmpCache && descs[prop].initAttr){
+			for (var prop in descs) {
+				if (!_noTmpCache && descs[prop].initAttr) {
 					initProp.createTmpCache(name);
 				}
-				if(propType){
-					if(descs[prop][propType]){
+				if (propType) {
+					if (descs[prop][propType]) {
 						//webshims.log('override: '+ name +'['+prop +'] for '+ propType);
 					} else {
 						descs[prop][propType] = {};
-						['value', 'set', 'get'].forEach(function(copyProp){
-							if(copyProp in descs[prop]){
+						['value', 'set', 'get'].forEach(function (copyProp) {
+							if (copyProp in descs[prop]) {
 								descs[prop][propType][copyProp] = descs[prop][copyProp];
 								delete descs[prop][copyProp];
 							}
@@ -787,114 +840,114 @@ webshims.register('dom-extend', function($, webshims, window, document, undefine
 				}
 				descs[prop] = webshims.defineNodeNameProperty(name, prop, descs[prop]);
 			}
-			if(!_noTmpCache){
+			if (!_noTmpCache) {
 				initProp.flushTmpCache();
 			}
 			return descs;
 		},
-		
-		createElement: function(nodeName, create, descs){
+
+		createElement                 : function (nodeName, create, descs) {
 			var ret;
-			if($.isFunction(create)){
+			if ($.isFunction(create)) {
 				create = {
 					after: create
 				};
 			}
 			initProp.createTmpCache(nodeName);
-			if(create.before){
+			if (create.before) {
 				initProp.createElement(nodeName, create.before);
 			}
-			if(descs){
+			if (descs) {
 				ret = webshims.defineNodeNameProperties(nodeName, descs, false, true);
 			}
-			if(create.after){
+			if (create.after) {
 				initProp.createElement(nodeName, create.after);
 			}
 			initProp.flushTmpCache();
 			return ret;
 		},
-		onNodeNamesPropertyModify: function(nodeNames, props, desc, only){
-			if(typeof nodeNames == 'string'){
+		onNodeNamesPropertyModify     : function (nodeNames, props, desc, only) {
+			if (typeof nodeNames == 'string') {
 				nodeNames = nodeNames.split(listReg);
 			}
-			if($.isFunction(desc)){
+			if ($.isFunction(desc)) {
 				desc = {set: desc};
 			}
-			
-			nodeNames.forEach(function(name){
-				if(!modifyProps[name]){
+
+			nodeNames.forEach(function (name) {
+				if (!modifyProps[name]) {
 					modifyProps[name] = {};
 				}
-				if(typeof props == 'string'){
+				if (typeof props == 'string') {
 					props = props.split(listReg);
 				}
-				if(desc.initAttr){
+				if (desc.initAttr) {
 					initProp.createTmpCache(name);
 				}
-				props.forEach(function(prop){
-					if(!modifyProps[name][prop]){
+				props.forEach(function (prop) {
+					if (!modifyProps[name][prop]) {
 						modifyProps[name][prop] = [];
 						havePolyfill[prop] = true;
 					}
-					if(desc.set){
-						if(only){
-							desc.set.only =  only;
+					if (desc.set) {
+						if (only) {
+							desc.set.only = only;
 						}
 						modifyProps[name][prop].push(desc.set);
 					}
-					
-					if(desc.initAttr){
+
+					if (desc.initAttr) {
 						initProp.content(name, prop);
 					}
 				});
 				initProp.flushTmpCache();
-				
+
 			});
 		},
-		defineNodeNamesBooleanProperty: function(elementNames, prop, descs){
-			if(!descs){
+		defineNodeNamesBooleanProperty: function (elementNames, prop, descs) {
+			if (!descs) {
 				descs = {};
 			}
-			if($.isFunction(descs)){
+			if ($.isFunction(descs)) {
 				descs.set = descs;
 			}
 			webshims.defineNodeNamesProperty(elementNames, prop, {
-				attr: {
-					set: function(val){
+				attr      : {
+					set: function (val) {
 						this.setAttribute(prop, val);
-						if(descs.set){
+						if (descs.set) {
 							descs.set.call(this, true);
 						}
 					},
-					get: function(){
+					get: function () {
 						var ret = this.getAttribute(prop);
 						return (ret == null) ? undefined : prop;
 					}
 				},
 				removeAttr: {
-					value: function(){
+					value: function () {
 						this.removeAttribute(prop);
-						if(descs.set){
+						if (descs.set) {
 							descs.set.call(this, false);
 						}
 					}
 				},
-				reflect: true,
-				propType: 'boolean',
-				initAttr: descs.initAttr || false
+				reflect   : true,
+				propType  : 'boolean',
+				initAttr  : descs.initAttr || false
 			});
 		},
-		contentAttr: function(elem, name, val){
-			if(!elem.nodeName){return;}
+		contentAttr                   : function (elem, name, val) {
+			if (!elem.nodeName) {return;}
 			var attr;
-			if(val === undefined){
+			if (val === undefined) {
 				attr = (elem.attributes[name] || {});
 				val = attr.specified ? attr.value : null;
 				return (val == null) ? undefined : val;
 			}
-			
-			if(typeof val == 'boolean'){
-				if(!val){
+
+			if (typeof val == 'boolean') {
+				if (!val) {
 					elem.removeAttribute(name);
 				} else {
 					elem.setAttribute(name, name);
@@ -903,166 +956,124 @@ webshims.register('dom-extend', function($, webshims, window, document, undefine
 				elem.setAttribute(name, val);
 			}
 		},
-		
-//		set current Lang:
-//			- webshims.activeLang(lang:string);
-//		get current lang
-//			- webshims.activeLang();
-//		get current lang
-//			webshims.activeLang({
-//				register: moduleName:string,
-//				callback: callback:function
-//			});
-//		get/set including remoteLang
-//			- webshims.activeLang({
-//				module: moduleName:string,
-//				callback: callback:function,
-//				langObj: languageObj:array/object
-//			});
-		activeLang: (function(){
-			var callbacks = [];
-			var registeredCallbacks = {};
-			var currentLang;
-			var shortLang;
-			var notLocal = /:\/\/|^\.*\//;
-			var loadRemoteLang = function(data, lang, options){
-				var langSrc;
-				if(lang && options && $.inArray(lang, options.availabeLangs || []) !== -1){
-					data.loading = true;
-					langSrc = options.langSrc;
-					if(!notLocal.test(langSrc)){
-						langSrc = webshims.cfg.basePath+langSrc;
-					}
-					webshims.loader.loadScript(langSrc+lang+'.js', function(){
-						if(data.langObj[lang]){
-							data.loading = false;
-							callLang(data, true);
-						} else {
-							$(function(){
-								if(data.langObj[lang]){
-									callLang(data, true);
-								}
-								data.loading = false;
+
+		activeLang: (function () {
+			var curLang = [];
+			var langDatas = [];
+			var loading = {};
+			var load = function (src, obj, loadingLang) {
+				obj._isLoading = true;
+				if (loading[src]) {
+					loading[src].push(obj);
+				} else {
+					loading[src] = [obj];
+					webshims.loader.loadScript(src, function () {
+						if (loadingLang == curLang.join()) {
+							$.each(loading[src], function (i, obj) {
+								select(obj);
 							});
 						}
-					});
-					return true;
-				}
-				return false;
-			};
-			var callRegister = function(module){
-				if(registeredCallbacks[module]){
-					registeredCallbacks[module].forEach(function(data){
-						data.callback(currentLang, shortLang, '');
+						delete loading[src];
 					});
 				}
 			};
-			var callLang = function(data, _noLoop){
-				if(data.activeLang != currentLang && data.activeLang !== shortLang){
-					var options = modules[data.module].options;
-					if( data.langObj[currentLang] || (shortLang && data.langObj[shortLang]) ){
-						data.activeLang = currentLang;
-						data.callback(data.langObj[currentLang] || data.langObj[shortLang], currentLang);
-						callRegister(data.module);
-					} else if( !_noLoop &&
-						!loadRemoteLang(data, currentLang, options) && 
-						!loadRemoteLang(data, shortLang, options) && 
-						data.langObj[''] && data.activeLang !== '' ) {
-						data.activeLang = '';
-						data.callback(data.langObj[''], currentLang);
-						callRegister(data.module);
-					}
-				}
-			};
-			
-			
-			var activeLang = function(lang){
-				
-				if(typeof lang == 'string' && lang !== currentLang){
-					currentLang = lang;
-					shortLang = currentLang.split('-')[0];
-					if(currentLang == shortLang){
-						shortLang = false;
-					}
-					$.each(callbacks, function(i, data){
-						callLang(data);
-					});
-				} else if(typeof lang == 'object'){
-					
-					if(lang.register){
-						if(!registeredCallbacks[lang.register]){
-							registeredCallbacks[lang.register] = [];
+			var select = function (obj) {
+				var oldLang = obj.__active;
+				var selectLang = function (i, lang) {
+					obj._isLoading = false;
+					if (obj[lang] || obj.availableLangs.indexOf(lang) != -1) {
+						if (obj[lang]) {
+							obj.__active = obj[lang];
+						} else {
+							load(obj.langSrc + lang, obj, curLang.join());
 						}
-						registeredCallbacks[lang.register].push(lang);
-						lang.callback(currentLang, shortLang, '');
-					} else {
-						if(!lang.activeLang){
-							lang.activeLang = '';
-						}
-						callbacks.push(lang);
-						callLang(lang);
+						return false;
 					}
+				};
+				$.each(curLang, selectLang);
+				if (!obj.__active) {
+					obj.__active = obj[''];
 				}
-				return currentLang;
+				if (oldLang != obj.__active) {
+					$(obj).trigger('change');
+				}
 			};
-			
-			return activeLang;
+			return function (lang) {
+				var shortLang;
+				if (typeof lang == 'string') {
+					if (curLang[0] != lang) {
+						curLang = [lang];
+						shortLang = curLang[0].split('-')[0];
+						if (shortLang && shortLang != lang) {
+							curLang.push(shortLang);
+						}
+						langDatas.forEach(select);
+					}
+				} else if (typeof lang == 'object') {
+					if (!lang.__active) {
+						langDatas.push(lang);
+						select(lang);
+					}
+					return lang.__active;
+				}
+				return curLang[0];
+			};
 		})()
 	});
-	
+
 	$.each({
-		defineNodeNamesProperty: 'defineNodeNameProperty',
+		defineNodeNamesProperty  : 'defineNodeNameProperty',
 		defineNodeNamesProperties: 'defineNodeNameProperties',
-		createElements: 'createElement'
-	}, function(name, baseMethod){
-		webshims[name] = function(names, a, b, c){
-			if(typeof names == 'string'){
+		createElements           : 'createElement'
+	}, function (name, baseMethod) {
+		webshims[name] = function (names, a, b, c) {
+			if (typeof names == 'string') {
 				names = names.split(listReg);
 			}
 			var retDesc = {};
-			names.forEach(function(nodeName){
+			names.forEach(function (nodeName) {
 				retDesc[nodeName] = webshims[baseMethod](nodeName, a, b, c);
 			});
 			return retDesc;
 		};
 	});
-	
+
 	webshims.isReady('webshimLocalization', true);
 });
 //html5a11y
-(function($, document){
-	if(!$.webshims.assumeARIA || ('content' in document.createElement('template'))){return;}
-	
-	$(function(){
+(function ($, document) {
+	if (!$.webshims.assumeARIA || ('content' in document.createElement('template'))) {return;}
+
+	$(function () {
 		var main = $('main').attr({role: 'main'});
-		if(main.length > 1){
+		if (main.length > 1) {
 			webshims.error('only one main element allowed in document');
-		} else if(main.is('article *, section *')) {
+		} else if (main.is('article *, section *')) {
 			webshims.error('main not allowed inside of article/section elements');
 		}
 	});
-	
-	if(('hidden' in document.createElement('a'))){
+
+	if (('hidden' in document.createElement('a'))) {
 		return;
 	}
-	
+
 	var elemMappings = {
 		article: "article",
-		aside: "complementary",
+		aside  : "complementary",
 		section: "region",
-		nav: "navigation",
+		nav    : "navigation",
 		address: "contentinfo"
 	};
-	var addRole = function(elem, role){
+	var addRole = function (elem, role) {
 		var hasRole = elem.getAttribute('role');
 		if (!hasRole) {
 			elem.setAttribute('role', role);
 		}
 	};
-	
-	
-	$.webshims.addReady(function(context, contextElem){
-		$.each(elemMappings, function(name, role){
+
+
+	$.webshims.addReady(function (context, contextElem) {
+		$.each(elemMappings, function (name, role) {
 			var elems = $(name, context).add(contextElem.filter(name));
 			for (var i = 0, len = elems.length; i < len; i++) {
 				addRole(elems[i], role);
@@ -1072,7 +1083,7 @@ webshims.register('dom-extend', function($, webshims, window, document, undefine
 			var header = document.getElementsByTagName('header')[0];
 			var footers = document.getElementsByTagName('footer');
 			var footerLen = footers.length;
-			
+
 			if (header && !$(header).closest('section, article')[0]) {
 				addRole(header, 'banner');
 			}
@@ -1085,5 +1096,5 @@ webshims.register('dom-extend', function($, webshims, window, document, undefine
 			}
 		}
 	});
-	
+
 })(webshims.$, document);
