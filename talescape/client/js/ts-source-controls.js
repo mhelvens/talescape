@@ -34,6 +34,16 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 			link: function (scope, element, attrs, controller) {
 
 
+				////////////////////////////
+				////// Display Button //////
+				//////                //////
+
+
+				controller.whenMapIsReady(function (map) {
+					map.controls[gmaps.ControlPosition.TOP_LEFT].push(element[0]);
+				});
+
+
 				//////////////////////
 				////// Counters //////
 				//////          //////
@@ -93,11 +103,10 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 						_running[scenario] = 0;
 					}
 
-					//// Perhaps load a requested scenario directly (when the map has settled)
-					//
-					if (scenario === PATH_SCENARIO) {
-						gmaps.event.addListenerOnce(controller.map(), 'idle', function() {
-							scope.$apply(function() { scope.scenario = scenario; });
+
+					if (scenario == PATH_SCENARIO) {
+						controller.whenMapIsReady(function () {
+							scope.scenario = scenario;
 						});
 					}
 				});
@@ -160,6 +169,7 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 					//// Center in on the new one
 					//
 					if (_count[newScenario]) {
+						controller.setCentering(controller.CENTERING_NOT);
 						var bounds = new gmaps.LatLngBounds;
 						_sources[newScenario].map(function (source) {
 							bounds.extend(source.pos());
@@ -225,15 +235,6 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 						}
 					}
 				});
-
-
-				////////////////////////////
-				////// Display Button //////
-				//////                //////
-
-
-				controller.map().controls[gmaps.ControlPosition.TOP_LEFT].push(element[0]);
-
 
 			}
 

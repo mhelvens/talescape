@@ -1,7 +1,7 @@
 'use strict';
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor', 'geo'], function ($, gmaps, angular) { ////////
+define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor', 'geo'], function ($, gmaps, angular) {//
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -16,7 +16,7 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor', 
 	////////////////////////////////////////////////////////////
 
 
-	angular.module('TS').controller('MapController', ['UserPosition', 'geo', function (UserPosition, geo) {
+	angular.module('TS').controller('MapController', ['$scope', 'UserPosition', 'geo', function ($scope, UserPosition, geo) {
 
 
 		var result = {};
@@ -37,6 +37,12 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor', 
 
 		result.map = function () {
 			return _map;
+		};
+
+		result.whenMapIsReady = function (handler) {
+			gmaps.event.addListenerOnce(_map, 'idle', function() {
+				$scope.$apply(function() { handler(_map); });
+			});
 		};
 
 		result.onNewUserPos = function (handler) {
@@ -79,6 +85,11 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor', 
 			} else {
 				_centering = result.CENTERING_NOT;
 			}
+			_onCenteringChangedCallbacks.fire(_centering);
+		};
+
+		result.setCentering = function (val) {
+			_centering = val;
 			_onCenteringChangedCallbacks.fire(_centering);
 		};
 
@@ -220,15 +231,11 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor', 
 						//
 						gmaps.event.addListener(controller.map(), 'zoom_changed', function () {
 							if (controller.centering() == controller.CENTERING_USER) {
-								scope.$apply(function () {
-									controller.map().setCenter((geo.lastKnownPosition() || geo.DEFAULT_POSITION).toLatLng());
-								});
+								controller.map().setCenter((geo.lastKnownPosition() || geo.DEFAULT_POSITION).toLatLng());
 							}
 						});
 					},
-					post: function (scope, element, attrs, controller) {
-
-					}
+					post: function (scope, element, attrs, controller) { }
 				};
 			}
 		};

@@ -311,7 +311,9 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map'], function ($, gmaps, angul
 				//////                 //////
 
 
-				controller.map().controls[gmaps.ControlPosition.TOP_LEFT].push(element[0]);
+				controller.whenMapIsReady(function(map) {
+					map.controls[gmaps.ControlPosition.TOP_LEFT].push(element[0]);
+				});
 
 
 				///////////////////////////////////////
