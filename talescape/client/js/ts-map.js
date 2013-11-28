@@ -98,7 +98,7 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'ts-source-editor', 
 		var _scenarioRegisteredCallback = $.Callbacks('unique');
 
 		result.registerScenario = function (scenario) {
-			if (scenario !== undefined) {
+			if (scenario !== undefined && _scenarios[scenario] === undefined) {
 				_scenarios[scenario] = [];
 				_scenarioRegisteredCallback.fire(scenario);
 			}

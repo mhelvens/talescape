@@ -19,6 +19,7 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 	angular.module('TS').directive('tsSourceControls', ['geo', '$location', function (geo, $location) { ////////////////
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+		var PATH_SCENARIO = $location.path().replace(/\-/g, ' ').substring(1);
 
 //      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		return { ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -77,17 +78,27 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 				var _sources = [];
 
 				controller.onScenarioRegistered(function (scenario) {
+					//// Load the first scenario we encounter (so at least something is loaded)
+					//
 					if (scope.scenario === undefined) {
 						scope.scenario = scenario;
 					}
+
+					//// If we don't know this scenario, add it to the collection
+					//
 					if (_sources[scenario] === undefined) {
 						scope.scenarios.push(scenario);
 						_sources[scenario] = [];
 						_count[scenario] = 0;
 						_running[scenario] = 0;
 					}
-					if (scenario == $location.hash()) {
-						scope.scenario = $location.hash();
+
+					//// Perhaps load a requested scenario directly (when the map has settled)
+					//
+					if (scenario === PATH_SCENARIO) {
+						gmaps.event.addListenerOnce(controller.map(), 'idle', function() {
+							scope.$apply(function() { scope.scenario = scenario; });
+						});
 					}
 				});
 
@@ -119,9 +130,11 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 						//noinspection AssignmentToFunctionParameterJS
 						scenario = scope.scenario;
 					}
-					_sources[scenario].map(function (source) {
-						source.pause();
-					});
+					if (_sources[scenario] !== undefined) {
+						_sources[scenario].map(function (source) {
+							source.pause();
+						});
+					}
 				};
 
 				scope.runOrPauseAll = function (scenario) {
@@ -159,8 +172,8 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 						//
 						if (newScenario == "Dam Square Experience") {
 							var message = new InfoBox({
-								content : "<div class=\"content\"></div><button class=\"OK\">OK</button>",
-								position: controller.map().getCenter(),
+								content    : "<div class=\"content\"></div><button class=\"OK\">OK</button>",
+								position   : controller.map().getCenter(),
 								pixelOffset: new gmaps.Size(-240, -150)
 							});
 
