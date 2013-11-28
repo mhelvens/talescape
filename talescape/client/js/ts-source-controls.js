@@ -114,8 +114,12 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 				controller.onSourceRegistered(function (source, scenario) {
 					_sources[scenario].push(source);
 					_count[scenario]++;
-					source.onRun(function () { _running[scenario]++; });
-					source.onPause(function () { _running[scenario]--; });
+					source.onRun(function () {
+						_running[scenario]++;
+					});
+					source.onPause(function () {
+						_running[scenario]--;
+					});
 				});
 
 
@@ -151,8 +155,12 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 						//noinspection AssignmentToFunctionParameterJS
 						scenario = scope.scenario;
 					}
-					if (_running[scenario] == 0) { scope.runAll(scenario); }
-					else { scope.pauseAll(scenario); }
+					if (_running[scenario] == 0) {
+						scope.runAll(scenario);
+					}
+					else {
+						scope.pauseAll(scenario);
+					}
 				};
 
 
@@ -179,58 +187,93 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 
 						// HACK!
 						// TODO: Make it possible to encode such messages properly
+						// TODO: This isn't really in the right place either
 						//
 						if (newScenario == "Dam Square Experience") {
-							var message = new InfoBox({
+							var messageBox = new InfoBox({
 								content    : "<div class=\"content\"></div><button class=\"OK\">OK</button>",
 								position   : controller.map().getCenter(),
 								pixelOffset: new gmaps.Size(-240, -150)
 							});
 
-							message.open(controller.map());
+							messageBox.open(controller.map());
 
-							gmaps.event.addDomListenerOnce(message, 'domready', function () {
+							gmaps.event.addDomListenerOnce(messageBox, 'domready', function () {
 
-								$('.infoBox > .content').html(
-										"<img style=\"display: block;\" src=\"img/Gezicht-op-de-Dam.jpg\">" +
-										"<p style=\"font-size:12pt\">" +
-										"The Dam Square Experience is made possible by the NWO project " +
-										"<a style=\"font-size:12pt\" href=\"http://www.maastrichtsts.nl/?project=soundscapes-of-the-urban-past-staged-sound-as-mediated-cultural-heritage\">Soundscapes of the Urban Past</a>, " +
-										"performed by the <a style=\"font-size:12pt\" href=\"http://www.maastrichtsts.nl\">STS&nbsp;research&nbsp;group</a> of Maastricht University." +
-										"</p>");
+								var messages = [
+									("<img style=\"display: block;\" src=\"img/Gezicht-op-de-Dam.jpg\">" +
+									 "<p style=\"font-size:12pt\">" +
+									 "    The Dam Square Experience is made possible by the NWO project " +
+									 "    <a style=\"font-size:12pt\" href=\"http://www.maastrichtsts.nl/?project=soundscapes-of-the-urban-past-staged-sound-as-mediated-cultural-heritage\">Soundscapes of the Urban Past</a>, " +
+									 "    performed by the <a style=\"font-size:12pt\" href=\"http://www.maastrichtsts.nl\">STS&nbsp;research&nbsp;group</a> of Maastricht University." +
+									 "</p>"),
 
-								$('.infoBox > .OK').one('click', $.proxy(message.close, message)).one('click', function () {
 
-									message.open(controller.map());
+									(bounds.contains(geo.lastKnownPosition().toLatLng())
+											?
+                                     "<p style=\"font-size:12pt\">" +
+                                     "    I see you're already at the Dam. Great!" +
+                                     "    <emph>Click</emph> on the play button in the top left corner of your screen to start the experience:" +
+                                     "</p>" +
+                                     "<div style=\"text-align: center;\">" +
+                                     "    <img style=\"border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/run-all.png\">" +
+                                     "</div>" +
+                                     "<p style=\"font-size:12pt\">" +
+                                     "    You can then hear the sounds of the Dam relative to your current position." +
+                                     "</p>"
+											:
+                                     "<p style=\"font-size:12pt\">" +
+                                     "<emph>Double click</emph> on an empty space on the map to simulate your presence at that location:" +
+                                     "</p>" +
+                                     "<div style=\"text-align: center\"><img src=\"img/marker-geomode-fake.png\"></div>" +
+                                     "<p style=\"font-size:12pt\">" +
+                                     "Then, <emph>click</emph> on the play button in the top left corner of your screen to start the experience:" +
+                                     "</p>" +
+                                     "<div style=\"text-align: center;\">" +
+                                     "    <img style=\"border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/run-all.png\">" +
+                                     "</div>" +
+                                     "<p style=\"font-size:12pt\">" +
+                                     "    You can then drag around the location marker to hear the sounds of the Dam relative to your current position." +
+                                     "</p>"),
 
-									gmaps.event.addDomListenerOnce(message, 'domready', function () {
 
-										$('.infoBox > .OK').one('click', $.proxy(message.close, message));
+									("<p style=\"font-size:12pt\">" +
+									 "    This button, in the top left corner of the screen, allows you to switch between a real and a simulated GPS position:" +
+									 "</p>" +
+									 "<div style=\"text-align: center; font-size: 24px\">" +
+									 "    <img style=\"vertical-align: -50%; display: inline-block; border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/geomode-real.png\">" +
+									 "    ⇔" +
+									 "    <img style=\"vertical-align: -50%; display: inline-block; border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/geomode-fake.png\">" +
+									 "</div>" +
+									 "<p style=\"font-size:12pt\">" +
+									 "    And this one switches between keeping the map centered on your position and allowing free exploration:" +
+									 "</p>" +
+									 "<div style=\"text-align: center; font-size: 24px\">" +
+									 "    <img style=\"vertical-align: -50%; display: inline-block; border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/centering-not.png\">" +
+									 "    ⇔" +
+									 "    <img style=\"vertical-align: -50%; display: inline-block; border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/centering-user.png\">" +
+									 "</div>")
+								];
 
-										if (bounds.contains(geo.lastKnownPosition().toLatLng())) {
-											$('.infoBox > .content').html(
-													"<p style=\"font-size:12pt\">" +
-													"I see you're already at the Dam. Great! " +
-													"<emph>Click</emph> on the play button in the top left corner of your screen to start the experience:" +
-													"</p>" +
-													"<div style=\"text-align: center;\"><img style=\"border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/run-all.png\"></div>" +
-													"<p style=\"font-size:12pt\">You can then hear the sounds of the Dam relative to your current position.</p>");
-										} else {
-											$('.infoBox > .content').html(
-													"<p style=\"font-size:12pt\">" +
-													"<emph>Double click</emph> on an empty space on the map to simulate your presence there:" +
-													"</p>" +
-													"<div style=\"text-align: center\"><img src=\"img/marker-geomode-fake.png\"></div>" +
-													"<p style=\"font-size:12pt\">" +
-													"Then, <emph>click</emph> on the play button in the top left corner of your screen to start the experience:" +
-													"</p>" +
-													"<div style=\"text-align: center;\"><img style=\"border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/run-all.png\"></div>" +
-													"<p style=\"font-size:12pt\">You can then drag around the location marker to hear the sounds of the Dam relative to your current position.</p>");
-										}
-									});
 
-								});
+								var contentDiv = $('.infoBox > .content');
+								var okButton = $('.infoBox > .OK');
 
+								var screen = 0;
+
+								function screenStep() {
+									if (screen < messages.length) {
+										contentDiv.html(messages[screen]);
+									} else {
+										okButton.off();
+										messageBox.close.call(messageBox);
+									}
+									++screen;
+								}
+
+								screenStep();
+
+								okButton.click(screenStep);
 							});
 						}
 					}
