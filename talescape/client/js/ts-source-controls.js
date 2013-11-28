@@ -238,17 +238,17 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 
 
 									("<p style=\"font-size:12pt\">" +
-									 "    This button, in the top left corner of the screen, allows you to switch between a real and a simulated GPS position:" +
+									 "    This button, in the top left corner of the screen, allows you to switch between a simulated and a real GPS position:" +
 									 "</p>" +
 									 "<div style=\"text-align: center; font-size: 24px\">" +
-									 "    <img style=\"vertical-align: -50%; display: inline-block; border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/geomode-real.png\">" +
-									 "    ⇔" +
 									 "    <img style=\"vertical-align: -50%; display: inline-block; border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/geomode-fake.png\">" +
+									 "    ⇔" +
+									 "    <img style=\"vertical-align: -50%; display: inline-block; border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/geomode-real.png\">" +
 									 "</div>" +
 									 "<p style=\"font-size:12pt\">" +
-									 "    And this one switches between keeping the map centered on your position and allowing free exploration:" +
+									 "    And this one switches between allowing free exploration of the map, and keeping it centered on your current position:" +
 									 "</p>" +
-									 "<div style=\"text-align: center; font-size: 24px\">" +
+									 "<div style=\"text-align: center; font-size: 24px; margin-bottom: 15px\">" +
 									 "    <img style=\"vertical-align: -50%; display: inline-block; border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/centering-not.png\">" +
 									 "    ⇔" +
 									 "    <img style=\"vertical-align: -50%; display: inline-block; border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/centering-user.png\">" +
