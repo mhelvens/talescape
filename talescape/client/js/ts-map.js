@@ -19,7 +19,7 @@ define(['gmaps', 'angular', 'TS', 'MapController', 'geo'], function (gmaps, angu
 			templateUrl: 'partials/tsMap/ts-map.html',
 			replace    : true,
 			transclude : true,
-			scope      : {},
+			scope      : {subtitle: '='},
 
 			compile: function () {
 				return {

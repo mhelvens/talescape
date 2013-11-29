@@ -16,7 +16,7 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 
 
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	angular.module('TS').directive('tsSourceControls', ['geo', '$location', function (geo, $location) { ////////////////
+	angular.module('TS').directive('tsSourceControls', ['geo', '$location', '$rootScope', function (geo, $location, $rootScope) { ////////////////
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		var PATH_SCENARIO = $location.path().replace(/\-/g, ' ').substring(1);
@@ -173,6 +173,10 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 					//// Pause the old scenario
 					//
 					scope.pauseAll(oldScenario);
+
+					//// Set the subtitle
+					//
+					$rootScope.subtitle = newScenario;
 
 					//// Center in on the new one
 					//
