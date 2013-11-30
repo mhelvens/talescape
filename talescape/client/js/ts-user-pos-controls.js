@@ -43,11 +43,19 @@ define(['jquery', 'gmaps', 'angular', 'geo', 'TS', 'ts-map'], function ($, gmaps
 			link: function (scope, element, attrs, controller) {
 
 
+				/////////////////////////////
+				////// Display Buttons //////
+				//////                 //////
+
+
+				controller.whenMapIsReady(function(map) {
+					map.controls[gmaps.ControlPosition.TOP_LEFT].push(element[0]);
+				});
+
+
 				//////////////////////
 				////// Geo Mode //////
 				//////          //////
-
-
 
 
 				scope.toggleGeoMode = function () {
@@ -80,16 +88,6 @@ define(['jquery', 'gmaps', 'angular', 'geo', 'TS', 'ts-map'], function ($, gmaps
 				scope.toggleCentering = controller.toggleCentering;
 				scope.centeringIcon = function () { return CENTERING_ICONS[controller.centering()]; };
 				scope.centeringTitle = function () { return CENTERING_TITLES[controller.centering()]; };
-
-
-				/////////////////////////////
-				////// Display Buttons //////
-				//////                 //////
-
-
-				controller.whenMapIsReady(function(map) {
-					map.controls[gmaps.ControlPosition.TOP_LEFT].push(element[0]);
-				});
 
 
 //          ////////////////////////////////////////////////////////////////////////////////////////////////////////////
