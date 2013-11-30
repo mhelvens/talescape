@@ -43,8 +43,10 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'geo'], function ($,
 		//
 		result.whenMapIsReady = function (handler) {
 			function listenToMapIdle() {
-				gmaps.event.addListenerOnce(_map, 'idle', function() {
-					$scope.$apply(function() { handler(_map); });
+				gmaps.event.addListenerOnce(_map, 'idle', function () {
+					$scope.$apply(function () {
+						handler(_map);
+					});
 				});
 			}
 
@@ -68,7 +70,7 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'geo'], function ($,
 
 		//// Initialize the user position marker when the map is ready
 		//
-		result.whenMapIsReady(function(map) {
+		result.whenMapIsReady(function (map) {
 			_userPos = new UserPosition(map);
 		});
 
@@ -108,7 +110,7 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'geo'], function ($,
 		//// We immediately subscribe ourselves, because
 		//// we want to adjust the map to the centering policy
 		//
-		_mapSetCallbacks.add(function() {
+		_mapSetCallbacks.add(function () {
 			result.onCenteringChanged(function (centering) {
 				if (centering == result.CENTERING_USER) {
 					_map.setCenter((geo.lastKnownPosition() || geo.DEFAULT_POSITION).toLatLng());
@@ -148,16 +150,12 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'geo'], function ($,
 		});
 
 
-
-
 		///////////////////////////////////
 		////// Registering Scenarios //////
 		//////                       //////
 
-
-		result.ROOT_SCENARIO = "";
-
 		var _scenarios = []; // maps scenarios to an array of sources
+		_scenarios[null] = []; // for sources without scenario
 
 		var _scenarioRegisteredCallback = $.Callbacks('unique');
 
@@ -170,15 +168,12 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'geo'], function ($,
 
 		result.onScenarioRegistered = function (handler) {
 			for (var sc in _scenarios) {
-				//noinspection JSUnfilteredForInLoop
-				handler(sc);
+				if (_scenarios.hasOwnProperty(sc) && sc) {
+					handler(sc);
+				}
 			}
 			_scenarioRegisteredCallback.add(handler);
 		};
-
-		//// register the root scenario
-		//
-		result.registerScenario(result.ROOT_SCENARIO);
 
 
 		/////////////////////////////////
@@ -189,18 +184,17 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'geo'], function ($,
 		var _sourceRegisteredCallback = $.Callbacks('unique');
 
 		result.registerSource = function (source, scenario) {
-			//noinspection AssignmentToFunctionParameterJS
-			scenario = (scenario === undefined ? ROOT_SCENARIO : scenario);
-			_scenarios[scenario].push(source);
-			_sourceRegisteredCallback.fire(source, scenario);
+			_scenarios[scenario || null].push(source);
+			_sourceRegisteredCallback.fire(source, scenario || null);
 		};
 
 		result.onSourceRegistered = function (handler) {
 			for (var sc in _scenarios) {
-				//noinspection JSUnfilteredForInLoop
-				_scenarios[sc].map(function (source) {
-					handler(source);
-				});
+				if (_scenarios.hasOwnProperty(sc)) {
+					_scenarios[sc].map(function (source) {
+						handler(source);
+					});
+				}
 			}
 			_sourceRegisteredCallback.add(handler);
 		};

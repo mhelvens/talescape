@@ -19,7 +19,7 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 	angular.module('TS').directive('tsSourceControls', ['geo', '$location', '$rootScope', function (geo, $location, $rootScope) { ////////////////
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-		var PATH_SCENARIO = $location.path().replace(/\-/g, ' ').substring(1);
+		var URL_SCENARIO = $location.path().replace(/\-/g, ' ').substring(1);
 
 //      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		return { ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -39,8 +39,10 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 				//////                //////
 
 
+				var index;
+
 				controller.whenMapIsReady(function (map) {
-					map.controls[gmaps.ControlPosition.TOP_LEFT].push(element[0]);
+					index = map.controls[gmaps.ControlPosition.TOP_LEFT].push(element[0]) - 1;
 				});
 
 
@@ -53,12 +55,12 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 				var _count = [];
 
 
-				scope.count = function () {
-					return _count[scope.scenario];
+				scope.count = function (scenario) {
+					return _count[(scenario !== undefined) ? scenario : scope.scenario];
 				};
 
-				scope.running = function () {
-					return _running[scope.scenario];
+				scope.running = function (scenario) {
+					return _running[(scenario !== undefined) ? scenario : scope.scenario];
 				};
 
 
@@ -87,13 +89,11 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 
 				var _sources = [];
 
-				controller.onScenarioRegistered(function (scenario) {
-					//// Load the first scenario we encounter (so at least something is loaded)
-					//
-					if (scope.scenario === undefined) {
-						scope.scenario = scenario;
-					}
+				_sources[null] = []; // for sources without scenario (not in scope.scenarios)
+				_count[null] = 0;
+				_running[null] = 0;
 
+				controller.onScenarioRegistered(function (scenario) {
 					//// If we don't know this scenario, add it to the collection
 					//
 					if (_sources[scenario] === undefined) {
@@ -104,7 +104,7 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 					}
 
 
-					if (scenario == PATH_SCENARIO) {
+					if (scenario === URL_SCENARIO) {
 						controller.whenMapIsReady(function () {
 							scope.scenario = scenario;
 						});
@@ -129,45 +129,56 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 
 
 				scope.runAll = function (scenario) {
-					if (scenario === undefined) {
-						//noinspection AssignmentToFunctionParameterJS
-						scenario = scope.scenario;
-					}
-					_sources[scenario].map(function (source) {
+					var sc = (scenario !== undefined) ? scenario : scope.scenario;
+					_sources[sc].map(function (source) {
 						source.run();
 					});
 				};
 
 				scope.pauseAll = function (scenario) {
-					if (scenario === undefined) {
-						//noinspection AssignmentToFunctionParameterJS
-						scenario = scope.scenario;
-					}
-					if (_sources[scenario] !== undefined) {
-						_sources[scenario].map(function (source) {
+					var sc = (scenario !== undefined) ? scenario : scope.scenario;
+					if (_sources[sc] !== undefined) { // TODO: necessary?
+						_sources[sc].map(function (source) {
 							source.pause();
 						});
 					}
 				};
 
 				scope.runOrPauseAll = function (scenario) {
-					if (scenario === undefined) {
-						//noinspection AssignmentToFunctionParameterJS
-						scenario = scope.scenario;
-					}
-					if (_running[scenario] == 0) {
-						scope.runAll(scenario);
-					}
-					else {
-						scope.pauseAll(scenario);
+					var sc = (scenario !== undefined) ? scenario : scope.scenario;
+					if (scope.running(sc)) {
+						scope.pauseAll(sc);
+					} else {
+						scope.runAll(sc);
 					}
 				};
+
+
+				/////////////////////////////////////////
+				////// Force Redraw when Necessary //////
+				//////                             //////
+
+
+				function redraw() {
+					if (index !== undefined) {
+						controller.map().controls[gmaps.ControlPosition.TOP_LEFT].push($('<div>')[0]);
+						controller.map().controls[gmaps.ControlPosition.TOP_LEFT].pop();
+					}
+				}
+
+				scope.$watch('scenario', redraw);
+				scope.$watch('count()', redraw);
+				scope.$watch('running()', redraw);
+
+
 
 
 				////////////////////////////////
 				////// Scenario Selection //////
 				//////                    //////
 
+
+				var infoWindowsSeen = [];
 
 				scope.$watch('scenario', function (newScenario, oldScenario) {
 					//// Pause the old scenario
@@ -180,7 +191,7 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 
 					//// Center in on the new one
 					//
-					if (_count[newScenario]) {
+					if (newScenario && _count[newScenario]) {
 						controller.setCentering(controller.CENTERING_NOT);
 						var bounds = new gmaps.LatLngBounds;
 						_sources[newScenario].map(function (source) {
@@ -193,7 +204,8 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 						// TODO: Make it possible to encode such messages properly
 						// TODO: This isn't really in the right place either
 						//
-						if (newScenario == "Dam Square Experience") {
+						if (!infoWindowsSeen[newScenario] && newScenario === "Dam Square Experience") {
+							infoWindowsSeen[newScenario] = true;
 							var messageBox = new InfoBox({
 								content    : "<div class=\"content\"></div><button class=\"OK\">OK</button>",
 								position   : controller.map().getCenter(),

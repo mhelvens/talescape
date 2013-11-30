@@ -2,7 +2,7 @@
 <html ng-controller="ApplicationController">
 <head>
 	<meta charset="utf-8"/>
-	<title ng-bind="title + (subtitle && ' - ' + subtitle)">Talescape</title>
+	<title ng-bind="title + (subtitle && (' - ' + subtitle) || '')">Talescape</title>
 	<link rel="stylesheet" href="index.css">
 	<meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
 	<script data-main="js/main.js" src="js/lib/requirejs/require.js"></script>

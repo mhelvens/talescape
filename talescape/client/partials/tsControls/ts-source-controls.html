@@ -3,10 +3,8 @@
 		<div class="select" draggable="false">
 			<span>
 				<!--suppress HtmlFormInputWithoutLabel -->
-				<select ng-model="scenario">
-					<option ng-repeat="sc in scenarios" value="{{sc}}">
-						{{sc || '&lt;no scenario&gt;'}}
-					</option>
+				<select ng-model="scenario" ng-options="sc for sc in scenarios">
+					<option value="">〈no scenario〉</option>
 				</select>
 			</span>
 		</div>
@@ -21,7 +19,13 @@
 	</div>
 	<div title="Of all {{count()}} sources, {{running() || 'none'}} {{running()==1 && 'is' || 'are'}} currently running.">
 		<div draggable="false">
-			<span><div class="text">{{running()}} / {{count()}}</div></span>
+			<span><div class="text">
+				<ng-pluralize count="count()" when="{
+					'0': '∅',
+					'one': '{{running() && &quot;on&quot; || &quot;off&quot;}}',
+					'other': '{{running()}} / {}'
+				}"></ng-pluralize>
+			</div></span>
 		</div>
 	</div>
 </div>
