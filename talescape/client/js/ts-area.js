@@ -38,154 +38,156 @@ define(['gmaps', 'angular', 'ts-map', 'SoundSource', 'AudioPlayer', 'TS', 'geo']
 			require    : '^tsMap',
 
 			link: function (scope, element, attrs, controller) {
+				controller.map().then(function (map) {
+
+					//////////////////////////
+					////// Audio Player //////
+					//////              //////
 
 
-				//////////////////////////
-				////// Audio Player //////
-				//////              //////
+					var audioPlayer = new AudioPlayer(element.children('audio')[0]);
 
 
-				var audioPlayer = new AudioPlayer(element.children('audio')[0]);
+					///////////////////////////
+					////// Source Marker //////
+					//////               //////
 
 
-				///////////////////////////
-				////// Source Marker //////
-				//////               //////
+					var sourceMarker = new SoundSource(
+							map,
+							parseFloat(attrs['lat']),
+							parseFloat(attrs['lng']),
+							parseFloat(attrs['radius']),
+							parseFloat(attrs['reach']),
+							attrs['path'],
+							parseFloat(attrs['velocity']),
+							attrs['invisible']);
 
 
-				var sourceMarker = new SoundSource(
-						controller.map(),
-						parseFloat(attrs['lat']),
-						parseFloat(attrs['lng']),
-						parseFloat(attrs['radius']),
-						parseFloat(attrs['reach']),
-						attrs['path'],
-						parseFloat(attrs['velocity']),
-						attrs['invisible']);
+					////////////////////////////////////////////////
+					////// Processing Proximity with the User //////
+					//////                                    //////
 
 
-				////////////////////////////////////////////////
-				////// Processing Proximity with the User //////
-				//////                                    //////
+					var loudness = parseFloat(attrs['loudness']);
+
+					function processInteractionWithUserPos() {
+
+						//// Calculate the distance between the two centers
+						//
+						var distance = gmaps.geometry.spherical.computeDistanceBetween(
+								sourceMarker.pos(),
+								geo.lastKnownPosition().toLatLng()
+						);
 
 
-				var loudness = parseFloat(attrs['loudness']);
-
-				function processInteractionWithUserPos() {
-
-					//// Calculate the distance between the two centers
-					//
-					var distance = gmaps.geometry.spherical.computeDistanceBetween(
-							sourceMarker.pos(),
-							geo.lastKnownPosition().toLatLng()
-					);
+						//// Tell the source marker whether the user is within reach
+						//
+						sourceMarker.setUserWithinReach(distance <= sourceMarker.reach());
 
 
-					//// Tell the source marker whether the user is within reach
-					//
-					sourceMarker.setUserWithinReach(distance <= sourceMarker.reach());
+						//// Set the audio volume
+						//
+						var volume = loudness;
 
+						if (sourceMarker.reach() < distance) {
+							volume *= 0;
+						} else if (distance < sourceMarker.radius()) {
+							volume *= 1;
+						} else { // (sourceMarker.radius() ≤ distance ≤ sourceMarker.reach())
+							volume *= 1 - quadraticProgression(
+									sourceMarker.radius(),
+									sourceMarker.reach(),
+									distance);
+						}
 
-					//// Set the audio volume
-					//
-					var volume = loudness;
-
-					if (sourceMarker.reach() < distance) {
-						volume *= 0;
-					} else if (distance < sourceMarker.radius()) {
-						volume *= 1;
-					} else { // (sourceMarker.radius() ≤ distance ≤ sourceMarker.reach())
-						volume *= 1 - quadraticProgression(
-								sourceMarker.radius(),
-								sourceMarker.reach(),
-								distance);
+						audioPlayer.setVolume(volume);
 					}
 
-					audioPlayer.setVolume(volume);
-				}
+
+					////////////////////////////////////////
+					////// Continuously Adjust Volume //////
+					//////                            //////
 
 
-				////////////////////////////////////////
-				////// Continuously Adjust Volume //////
-				//////                            //////
+					processInteractionWithUserPos();
+
+					geo.watchPosition(processInteractionWithUserPos);
+
+					sourceMarker.onNewPos(processInteractionWithUserPos);
 
 
-				processInteractionWithUserPos();
-
-				geo.watchPosition(processInteractionWithUserPos);
-
-				sourceMarker.onNewPos(processInteractionWithUserPos);
+					///////////////////////
+					////// Interface //////
+					//////           //////
 
 
-				///////////////////////
-				////// Interface //////
-				//////           //////
+					var result = {};
 
 
-				var result = {};
+					result.pos = sourceMarker.pos;
 
+					var _running = false;
 
-				result.pos = sourceMarker.pos;
+					result.running = function () {
+						return _running;
+					};
 
-				var _running = false;
+					result.run = function () {
+						if (!_running) {
+							_running = true;
+							audioPlayer.loop();
+							sourceMarker.start();
+							window.setTimeout(processInteractionWithUserPos, 10);
+							_onRunCallback.fire();
+						}
+					};
 
-				result.running = function () {
-					return _running;
-				};
+					result.pause = function () {
+						if (_running) {
+							_running = false;
+							audioPlayer.pause();
+							sourceMarker.stop();
+							_onPauseCallback.fire();
+						}
+					};
 
-				result.run = function () {
-					if (!_running) {
-						_running = true;
-						audioPlayer.loop();
-						sourceMarker.start();
-						window.setTimeout(processInteractionWithUserPos, 10);
-						_onRunCallback.fire();
+					result.toggle = function () {
+						if (_running) {
+							result.pause();
+						} else {
+							result.run();
+						}
+					};
+
+					var _onRunCallback = $.Callbacks('unique');
+					var _onPauseCallback = $.Callbacks('unique');
+
+					result.onRun = function (handler) {
+						_onRunCallback.add(handler);
+					};
+
+					result.onPause = function (handler) {
+						_onPauseCallback.add(handler);
+					};
+
+					if (attrs['scenario'] !== undefined) {
+						controller.registerScenario(attrs['scenario']);
 					}
-				};
-
-				result.pause = function () {
-					if (_running) {
-						_running = false;
-						audioPlayer.pause();
-						sourceMarker.stop();
-						_onPauseCallback.fire();
-					}
-				};
-
-				result.toggle = function () {
-					if (_running) {
-						result.pause();
-					} else {
-						result.run();
-					}
-				};
-
-				var _onRunCallback = $.Callbacks('unique');
-				var _onPauseCallback = $.Callbacks('unique');
-
-				result.onRun = function (handler) {
-					_onRunCallback.add(handler);
-				};
-
-				result.onPause = function (handler) {
-					_onPauseCallback.add(handler);
-				};
-
-				if (attrs['scenario'] !== undefined) {
-					controller.registerScenario(attrs['scenario']);
-				}
-				controller.registerSource(result, attrs['scenario']);
+					controller.registerSource(result, attrs['scenario']);
 
 
-				//////////////////////////////////////
-				////// Click to Toggle Playback //////
-				//////                          //////
+					//////////////////////////////////////
+					////// Click to Toggle Playback //////
+					//////                          //////
 
 
-				sourceMarker.onClick(function () {
-					scope.$apply(result.toggle());
+					sourceMarker.onClick(function () {
+						scope.$apply(result.toggle());
+					});
+
+
 				});
-
 			}
 
 

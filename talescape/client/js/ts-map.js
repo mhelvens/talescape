@@ -23,7 +23,7 @@ define(['gmaps', 'angular', 'TS', 'MapController', 'geo'], function (gmaps, angu
 
 			compile: function () {
 				return {
-					pre : function (scope, element, attrs, controller) {
+					pre: function (scope, element, attrs, controller) {
 
 						//// Create the map
 						//
@@ -38,36 +38,40 @@ define(['gmaps', 'angular', 'TS', 'MapController', 'geo'], function (gmaps, angu
 								]}
 							],
 							// starting options
-							zoom                  : parseInt(attrs['zoom']) || 20,
+							zoom                  : parseInt(attrs['zoom']) || 18,
 							center                : new gmaps.LatLng(
 									parseFloat(attrs['lat']) || geo.DEFAULT_POSITION.coords.latitude,
 									parseFloat(attrs['lng']) || geo.DEFAULT_POSITION.coords.latitude)
 						}));
 
-						//// Set fake position on double click
-						//
-						gmaps.event.addListener(controller.map(), 'dblclick', function (mouseEvent) {
-							mouseEvent.stop();
-							scope.$apply(function () {
-								geo.setMode(geo.GEO_FAKE);
-								geo.setFakePosition(mouseEvent.latLng.lat(), mouseEvent.latLng.lng());
+						controller.map().then(function (map) {
+
+							//// Set fake position on double click
+							//
+							gmaps.event.addListener(map, 'dblclick', function (mouseEvent) {
+								mouseEvent.stop();
+								scope.$apply(function () {
+									geo.setMode(geo.GEO_FAKE);
+									geo.setFakePosition(mouseEvent.latLng.lat(), mouseEvent.latLng.lng());
+								});
 							});
-						});
 
-						//// Adjust to new user position
-						//
-						geo.watchPosition(function (userPos) {
-							if (controller.centering() == controller.CENTERING_USER) {
-								controller.map().setCenter((userPos || geo.DEFAULT_POSITION).toLatLng());
-							}
-						});
+							//// Adjust to new user position
+							//
+							geo.watchPosition(function (userPos) {
+								if (controller.centering() == controller.CENTERING_USER) {
+									map.setCenter((userPos || geo.DEFAULT_POSITION).toLatLng());
+								}
+							});
 
-						//// Adjust to new zoom-level
-						//
-						gmaps.event.addListener(controller.map(), 'zoom_changed', function () {
-							if (controller.centering() == controller.CENTERING_USER) {
-								controller.map().setCenter((geo.lastKnownPosition() || geo.DEFAULT_POSITION).toLatLng());
-							}
+							//// Adjust to new zoom-level
+							//
+							gmaps.event.addListener(map, 'zoom_changed', function () {
+								if (controller.centering() == controller.CENTERING_USER) {
+									map.setCenter((geo.lastKnownPosition() || geo.DEFAULT_POSITION).toLatLng());
+								}
+							});
+
 						});
 					}
 				};

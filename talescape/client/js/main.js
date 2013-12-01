@@ -49,6 +49,7 @@ requirejs(['patches'], function () {
 		$.webshims.setOptions('geolocation', {
 			confirmText: 'Talescape needs to know your GPS location. Is that OK?'
 		});
+
 		$.webshims.polyfill('geolocation');
 
 		console.log('Polyfills loaded.');

@@ -6,7 +6,7 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'geo'], function ($,
 
 
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	angular.module('TS').controller('MapController', ['$scope', 'UserPosition', 'geo', function ($scope, UserPosition, geo) {
+	angular.module('TS').controller('MapController', ['$scope', '$q', 'UserPosition', 'geo', function ($scope, $q, UserPosition, geo) {
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -18,43 +18,22 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'geo'], function ($,
 		//////                //////
 
 
-		//// Storing the map
-		//
-		var _map;
-
-
 		//// Getting the map
 		//
+		var _map = $q.defer();
 		result.map = function () {
-			return _map;
+			return _map.promise;
 		};
 
 
 		//// Setting the map
 		//
-		var _mapSetCallbacks = $.Callbacks('unique');
 		result.setMap = function (map) {
-			_map = map;
-			_mapSetCallbacks.fire();
-		};
-
-
-		//// Scheduling stuff for when the map is set and ready
-		//
-		result.whenMapIsReady = function (handler) {
-			function listenToMapIdle() {
-				gmaps.event.addListenerOnce(_map, 'idle', function () {
-					$scope.$apply(function () {
-						handler(_map);
-					});
-				});
-			}
-
-			if (_map) {
-				listenToMapIdle();
-			} else {
-				_mapSetCallbacks.add(listenToMapIdle);
-			}
+			_map.notify(map); // created but not ready
+			gmaps.event.addListenerOnce(map, 'idle', function () {
+				_map.resolve(map); // ready
+			});
+			delete result.setMap; // only set it once
 		};
 
 
@@ -70,10 +49,9 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'geo'], function ($,
 
 		//// Initialize the user position marker when the map is ready
 		//
-		result.whenMapIsReady(function (map) {
+		result.map().then(function (map) {
 			_userPos = new UserPosition(map);
 		});
-
 
 		/////////////////////////////////////////
 		////// Manage the Centering Policy //////
@@ -110,13 +88,13 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'geo'], function ($,
 		//// We immediately subscribe ourselves, because
 		//// we want to adjust the map to the centering policy
 		//
-		_mapSetCallbacks.add(function () {
+		result.map().then(function (map) {
 			result.onCenteringChanged(function (centering) {
 				if (centering == result.CENTERING_USER) {
-					_map.setCenter((geo.lastKnownPosition() || geo.DEFAULT_POSITION).toLatLng());
-					_map.setOptions({ draggable: false });
+					map.setCenter((geo.lastKnownPosition() || geo.DEFAULT_POSITION).toLatLng());
+					map.setOptions({ draggable: false });
 				} else {
-					_map.setOptions({ draggable: true });
+					map.setOptions({ draggable: true });
 				}
 			});
 		});
@@ -145,9 +123,16 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'UserPosition', 'geo'], function ($,
 
 		//// But we want to start centered, regardless of the centering policy
 		//
-		geo.getCurrentPosition(function (pos) {
-			_map.setCenter(pos.toLatLng());
+		// TODO: Unless we will be centering in on a scenario! Don't center again after that happens!
+		//
+		$q.all({map: result.map(), pos: geo.currentPosition()}).then(function (p) {
+			p.map.setCenter(p.pos.toLatLng());
 		});
+//		result.map().then(function(map) {
+//			geo.currentPosition().then(function(pos) {
+//				map.setCenter(pos.toLatLng());
+//			});
+//		});
 
 
 		///////////////////////////////////

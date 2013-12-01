@@ -12,7 +12,7 @@ define(['angular'], function (angular) {
 
 	var TS = angular.module('TS', []);
 
-	TS.config(function($locationProvider) {
+	TS.config(function ($locationProvider) {
 		$locationProvider.html5Mode(true).hashPrefix('');
 	});
 

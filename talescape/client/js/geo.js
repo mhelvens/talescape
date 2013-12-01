@@ -21,7 +21,7 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular, TS) { 
 
 
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	angular.module('TS').factory('geo', ['$rootScope', function ($rootScope) { /////////////////////////////////////////
+	angular.module('TS').factory('geo', ['$rootScope', '$q', function ($rootScope, $q) { ///////////////////////////////
 //  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -37,11 +37,11 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular, TS) { 
 		result.GEO_UNKNOWN = 'GEO_UNKNOWN';
 		result.GEO_KNOWN = 'GEO_KNOWN';
 
-		var _geoMode = result.GEO_REAL;
-		var _geoKnown = result.GEO_UNKNOWN;
-
 		result.DEFAULT_POSITION = _latLngToFakePosition(52.3567841, 4.9520856); // CWI, Amsterdam
 
+
+		var _geoMode = result.GEO_REAL;
+		var _geoKnown = result.GEO_UNKNOWN;
 		var _fakePosition = result.DEFAULT_POSITION;
 		var _lastRealPosition = result.DEFAULT_POSITION;
 
@@ -83,6 +83,18 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular, TS) { 
 			} else if (_geoMode == result.GEO_FAKE) {
 				successCallback(_fakePosition);
 			}
+		};
+
+		result.currentPosition = function (options) {
+			var deferred = $q.defer();
+
+			result.getCurrentPosition(function (pos) {
+				deferred.resolve(pos);
+			}, function (err) {
+				deferred.reject(err);
+			}, options);
+
+			return deferred.promise;
 		};
 
 		var _geoWatchIdCount = 0;
@@ -149,11 +161,9 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular, TS) { 
 		result.lastKnownPosition = function () {
 			if (_geoMode == result.GEO_REAL) {
 				return _lastRealPosition;
-			}
-			else if (_fakePosition) {
+			} else if (_fakePosition) {
 				return _fakePosition;
-			}
-			else {
+			} else {
 				return result.DEFAULT_POSITION;
 			}
 		};
@@ -175,11 +185,9 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular, TS) { 
 		function _useFakeGeo(lat, lng) {
 			if (lat) {
 				_fakePosition = _latLngToFakePosition(lat, lng);
-			}
-			else if (_lastRealPosition) {
+			} else if (_lastRealPosition) {
 				_fakePosition = _lastRealPosition;
-			}
-			else {
+			} else {
 				_fakePosition = result.DEFAULT_POSITION;
 			}
 
@@ -200,8 +208,7 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular, TS) { 
 		result.setMode = function (mode) {
 			if (mode == result.GEO_REAL) {
 				_useRealGeo();
-			}
-			else {
+			} else {
 				_useFakeGeo();
 			}
 		};
@@ -209,8 +216,7 @@ define(['jquery', 'gmaps', 'angular', 'TS'], function ($, gmaps, angular, TS) { 
 		result.toggleMode = function () {
 			if (_geoMode == result.GEO_FAKE) {
 				_useRealGeo();
-			}
-			else {
+			} else {
 				_useFakeGeo();
 			}
 			_onModeToggleCallbacks.fire(result.mode());

@@ -41,54 +41,62 @@ define(['jquery', 'gmaps', 'angular', 'geo', 'TS', 'ts-map'], function ($, gmaps
 			scope      : {},
 
 			link: function (scope, element, attrs, controller) {
+				controller.map().then(function (map) {
 
 
-				/////////////////////////////
-				////// Display Buttons //////
-				//////                 //////
+					/////////////////////////////
+					////// Display Buttons //////
+					//////                 //////
 
 
-				controller.whenMapIsReady(function(map) {
 					map.controls[gmaps.ControlPosition.TOP_LEFT].push(element[0]);
+
+
+					//////////////////////
+					////// Geo Mode //////
+					//////          //////
+
+
+					scope.toggleGeoMode = function () {
+						geo.toggleMode();
+
+						//// Move a new fake location marker to the current center of the map
+						//
+						if (geo.mode() == geo.GEO_FAKE) {
+							var center = map.getCenter();
+							geo.setFakePosition(center.lat(), center.lng());
+						}
+					};
+					scope.geoModeIcon = function () {
+						return GEOMODE[geo.mode()][geo.known()].icon;
+					};
+					scope.geoModeTitle = function () {
+						return GEOMODE[geo.mode()][geo.known()].title;
+					};
+
+
+					///////////////////////
+					////// Centering //////
+					//////           //////
+
+
+					var CENTERING_ICONS = [];
+					CENTERING_ICONS[controller.CENTERING_NOT] = 'img/centering-not.png';
+					CENTERING_ICONS[controller.CENTERING_USER] = 'img/centering-user.png';
+
+					var CENTERING_TITLES = [];
+					CENTERING_TITLES[controller.CENTERING_NOT] = 'Currently not auto-centering the map.';
+					CENTERING_TITLES[controller.CENTERING_USER] = 'Currently auto-centering the map on your position.';
+
+					scope.toggleCentering = controller.toggleCentering;
+					scope.centeringIcon = function () {
+						return CENTERING_ICONS[controller.centering()];
+					};
+					scope.centeringTitle = function () {
+						return CENTERING_TITLES[controller.centering()];
+					};
+
 				});
-
-
-				//////////////////////
-				////// Geo Mode //////
-				//////          //////
-
-
-				scope.toggleGeoMode = function () {
-					geo.toggleMode();
-
-					//// Move a new fake location marker to the current center of the map
-					//
-					if (geo.mode() == geo.GEO_FAKE) {
-						var center = controller.map().getCenter();
-						geo.setFakePosition(center.lat(), center.lng());
-					}
-				};
-				scope.geoModeIcon = function () { return GEOMODE[geo.mode()][geo.known()].icon; };
-				scope.geoModeTitle = function () { return GEOMODE[geo.mode()][geo.known()].title; };
-
-
-				///////////////////////
-				////// Centering //////
-				//////           //////
-
-
-				var CENTERING_ICONS = [];
-				CENTERING_ICONS[controller.CENTERING_NOT] = 'img/centering-not.png';
-				CENTERING_ICONS[controller.CENTERING_USER] = 'img/centering-user.png';
-
-				var CENTERING_TITLES = [];
-				CENTERING_TITLES[controller.CENTERING_NOT] = 'Currently not auto-centering the map.';
-				CENTERING_TITLES[controller.CENTERING_USER] = 'Currently auto-centering the map on your position.';
-
-				scope.toggleCentering = controller.toggleCentering;
-				scope.centeringIcon = function () { return CENTERING_ICONS[controller.centering()]; };
-				scope.centeringTitle = function () { return CENTERING_TITLES[controller.centering()]; };
-
 
 //          ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 			}};/////////////////////////////////////////////////////////////////////////////////////////////////////////
