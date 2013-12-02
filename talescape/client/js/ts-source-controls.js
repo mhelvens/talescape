@@ -201,9 +201,10 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 							if (!infoWindowsSeen[newScenario] && newScenario === "Dam Square Experience") {
 								infoWindowsSeen[newScenario] = true;
 								var messageBox = new InfoBox({
-									content    : "<div class=\"content\"></div><button class=\"OK\">OK</button>",
-									position   : map.getCenter(),
-									pixelOffset: new gmaps.Size(-240, -150)
+									content               : "<div class=\"content\"></div><button class=\"OK\">OK</button>",
+									enableEventPropagation: true,
+									position              : map.getCenter(),
+									pixelOffset           : new gmaps.Size(-240, -150)
 								});
 
 								messageBox.open(map);
