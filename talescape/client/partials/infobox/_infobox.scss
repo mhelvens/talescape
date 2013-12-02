@@ -25,8 +25,26 @@ $info-box-padding : 10px;
 			margin : $info-box-padding;
 		}
 
+		img.button-image {
+			border         : solid 1px gray;
+			padding        : 4px;
+			height         : 16px;
+			width          : 16px;
+			vertical-align : -50%;
+			display        : inline-block;
+		}
+
+		img.centered {
+			display : block !important;
+			margin  : 0 auto;
+		}
+
 		p {
 			margin : $info-box-padding + 10px;
+
+			&, a {
+				font-size : 12pt;
+			}
 		}
 	}
 

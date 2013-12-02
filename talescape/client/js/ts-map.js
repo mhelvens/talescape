@@ -32,6 +32,8 @@ define(['gmaps', 'angular', 'TS', 'MapController', 'geo'], function (gmaps, angu
 							mapTypeId             : gmaps.MapTypeId.SATELLITE,
 							disableDefaultUI      : true,
 							disableDoubleClickZoom: true,
+							zoomControl           : true,
+							zoomControlOptions    : { position: gmaps.ControlPosition.LEFT_TOP },
 							styles                : [
 								{featureType: "all", elementType: "labels", stylers: [
 									{visibility: "off"}

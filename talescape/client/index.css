@@ -92,8 +92,20 @@ html, body {
     border: none; }
     .infoBox > .content img {
       margin: 10px; }
+    .infoBox > .content img.button-image {
+      border: solid 1px gray;
+      padding: 4px;
+      height: 16px;
+      width: 16px;
+      vertical-align: -50%;
+      display: inline-block; }
+    .infoBox > .content img.centered {
+      display: block !important;
+      margin: 0 auto; }
     .infoBox > .content p {
       margin: 20px; }
+      .infoBox > .content p, .infoBox > .content p a {
+        font-size: 12pt; }
   .infoBox > .OK {
     width: 100%;
     border: none;

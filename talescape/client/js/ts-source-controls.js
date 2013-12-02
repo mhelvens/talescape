@@ -192,7 +192,6 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 								bounds.extend(source.pos());
 							});
 							map.fitBounds(bounds);
-							//map.setZoom(map.getZoom()-1);
 
 							// HACK!
 							// TODO: Make it possible to encode such messages properly
@@ -213,56 +212,52 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 
 									var messages = [
 										("<img style=\"display: block;\" src=\"img/Gezicht-op-de-Dam.jpg\">" +
-										 "<p style=\"font-size:12pt\">" +
+										 "<p>" +
 										 "    The Dam Square Experience is made possible by the NWO project " +
-										 "    <a style=\"font-size:12pt\" href=\"http://www.maastrichtsts.nl/?project=soundscapes-of-the-urban-past-staged-sound-as-mediated-cultural-heritage\">Soundscapes of the Urban Past</a>, " +
-										 "    performed by the <a style=\"font-size:12pt\" href=\"http://www.maastrichtsts.nl\">STS&nbsp;research&nbsp;group</a> of Maastricht University." +
+										 "    <a href=\"http://www.maastrichtsts.nl/?project=soundscapes-of-the-urban-past-staged-sound-as-mediated-cultural-heritage\">Soundscapes of the Urban Past</a>, " +
+										 "    performed by the <a href=\"http://www.maastrichtsts.nl\">STS&nbsp;research&nbsp;group</a> of Maastricht University." +
 										 "</p>"),
 
 
 										(bounds.contains(geo.lastKnownPosition().toLatLng())
 												?
-                                         "<p style=\"font-size:12pt\">" +
+                                         "<p>" +
                                          "    I see you're already at the Dam. Great!" +
-                                         "    <emph>Click</emph> on the play button in the top left corner of your screen to start the experience:" +
+                                         "    <em>Click</em> on the play button in the top left corner of your screen to start the experience:" +
                                          "</p>" +
-                                         "<div style=\"text-align: center;\">" +
-                                         "    <img style=\"border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/run-all.png\">" +
-                                         "</div>" +
-                                         "<p style=\"font-size:12pt\">" +
+                                         "<img class=\"button-image\" src=\"img/run-all.png\">" +
+                                         "<p>" +
                                          "    You can then hear the sounds of the Dam relative to your current position." +
                                          "</p>"
 												:
-                                         "<p style=\"font-size:12pt\">" +
-                                         "<emph>Double click</emph> on an empty space on the map to simulate your presence at that location:" +
+                                         "<p>" +
+                                         "<em>Double click</em> on an empty space on the map to simulate your presence at that location:" +
                                          "</p>" +
-                                         "<div style=\"text-align: center\"><img src=\"img/marker-geomode-fake.png\"></div>" +
-                                         "<p style=\"font-size:12pt\">" +
-                                         "Then, <emph>click</emph> on the play button in the top left corner of your screen to start the experience:" +
+                                         "<img class=\"centered\" src=\"img/marker-geomode-fake.png\">" +
+                                         "<p>" +
+                                         "Then, <em>click</em> on the play button in the top left corner of your screen to start the experience:" +
                                          "</p>" +
-                                         "<div style=\"text-align: center;\">" +
-                                         "    <img style=\"border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/run-all.png\">" +
-                                         "</div>" +
-                                         "<p style=\"font-size:12pt\">" +
+                                         "<img class=\"button-image centered\" src=\"img/run-all.png\">" +
+                                         "<p>" +
                                          "    You can then drag around the location marker to hear the sounds of the Dam relative to your current position." +
                                          "</p>"),
 
 
-										("<p style=\"font-size:12pt\">" +
+										("<p>" +
 										 "    This button, in the top left corner of the screen, allows you to switch between a simulated and a real GPS position:" +
 										 "</p>" +
 										 "<div style=\"text-align: center; font-size: 24px\">" +
-										 "    <img style=\"vertical-align: -50%; display: inline-block; border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/geomode-fake.png\">" +
+										 "    <img class=\"button-image\" src=\"img/geomode-fake.png\">" +
 										 "    ⇔" +
-										 "    <img style=\"vertical-align: -50%; display: inline-block; border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/geomode-real.png\">" +
+										 "    <img class=\"button-image\" src=\"img/geomode-real.png\">" +
 										 "</div>" +
-										 "<p style=\"font-size:12pt\">" +
+										 "<p>" +
 										 "    And this one switches between allowing free exploration of the map, and keeping it centered on your current position:" +
 										 "</p>" +
 										 "<div style=\"text-align: center; font-size: 24px; margin-bottom: 15px\">" +
-										 "    <img style=\"vertical-align: -50%; display: inline-block; border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/centering-not.png\">" +
+										 "    <img class=\"button-image\" src=\"img/centering-not.png\">" +
 										 "    ⇔" +
-										 "    <img style=\"vertical-align: -50%; display: inline-block; border: solid 1px gray; padding: 4px; height: 16px; width: 16px\"\" src=\"img/centering-user.png\">" +
+										 "    <img class=\"button-image\" src=\"img/centering-user.png\">" +
 										 "</div>")
 									];
 
