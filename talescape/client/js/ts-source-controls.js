@@ -172,6 +172,7 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 					//////                    //////
 
 
+					var messageBox = null;
 					var infoWindowsSeen = [];
 
 					scope.$watch('scenario', function (newScenario, oldScenario) {
@@ -182,6 +183,13 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 						//// Set the subtitle
 						//
 						$rootScope.subtitle = newScenario;
+
+						//// Hide any info windows that may be hanging around
+						//
+						if (messageBox) {
+							messageBox.close();
+							messageBox = null;
+						}
 
 						//// Center in on the new one
 						//
@@ -200,7 +208,7 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 							//
 							if (!infoWindowsSeen[newScenario] && newScenario === "Dam Square Experience") {
 								infoWindowsSeen[newScenario] = true;
-								var messageBox = new InfoBox({
+								messageBox = new InfoBox({
 									content               : "<div class=\"content\"></div><button class=\"OK\">OK</button>",
 									enableEventPropagation: true,
 									position              : map.getCenter(),
