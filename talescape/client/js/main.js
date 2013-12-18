@@ -16,30 +16,35 @@ require.config({
 		'polyfiller': ['jquery', 'modernizr'],
 		'angular'   : { exports: 'angular' },
 		'infobox'   : { deps: ['gmaps'], exports: 'InfoBox' }
+	},
+	map: {
+		'*': { 'jquery': 'jquery-private' },
+		'jquery-private': { 'jquery': 'jquery' }
 	}
 });
-
-
-//// The Angular Talescape Modules to Load
-//
-var TALESCAPE_ANGULAR_DIRECTIVES = [
-	'ts-map',
-	'ts-area',
-	'ts-source-controls',
-	'ts-user-pos-controls',
-	'ts-source-editor'
-];
 
 
 //// Load javascript patches before anything else
 //
 requirejs(['patches'], function () {
 
+
+	//// The Angular Talescape Modules to Load
+	//
+	var TALESCAPE_ANGULAR_DIRECTIVES = [
+		'ts-map',
+		'ts-area',
+		'ts-source-controls',
+		'ts-user-pos-controls',
+		'ts-source-editor'
+	];
+
+
 	//// Load Polyfills
 	//
 	requirejs(['jquery', 'polyfiller'], function ($) {
 
-		console.info('Loading polyfills...');
+		console.log("Loading polyfills...");
 
 		$.webshims.setOptions({
 			waitReady: false,
@@ -47,20 +52,21 @@ requirejs(['patches'], function () {
 		});
 
 		$.webshims.setOptions('geolocation', {
-			confirmText: 'Talescape needs to know your GPS location. Is that OK?'
+			confirmText: "Talescape needs to know your GPS location. Is that OK?"
 		});
 
 		$.webshims.polyfill('geolocation');
 
-		console.log('Polyfills loaded.');
+		console.log("Polyfills loaded.");
 
 	});
+
 
 	//// Bootstrap Angular
 	//
 	requirejs(['angular', 'domReady!', 'ts-map'].concat(TALESCAPE_ANGULAR_DIRECTIVES), function (angular) {
 
-		console.info('Bootstrapping Angular...');
+		console.log('Bootstrapping Angular...');
 
 		angular.bootstrap(document, ['TS']);
 
@@ -68,5 +74,5 @@ requirejs(['patches'], function () {
 
 	});
 
-});
 
+});
