@@ -313,8 +313,6 @@ define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map'], function ($, gmaps, angul
 					//////                 //////
 
 
-					console.debug($location.search().edit);
-
 					if ($location.search().edit) {
 						map.controls[gmaps.ControlPosition.TOP_LEFT].push(element[0]);
 					}
