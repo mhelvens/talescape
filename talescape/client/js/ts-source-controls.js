@@ -1,7 +1,7 @@
 'use strict';
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], function ($, gmaps, angular) { ////////////////
+define(['jquery', 'gmaps', 'angular', 'TS', 'ts-map', 'geo'], function ($, gmaps, angular) { ////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -176,6 +176,8 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 					var infoWindowsSeen = [];
 
 					scope.$watch('scenario', function (newScenario, oldScenario) {
+						console.log("NEW SCENARIO: " + newScenario);
+
 						//// Pause the old scenario
 						//
 						scope.pauseAll(oldScenario);
@@ -187,11 +189,11 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 						//// Hide any info windows that may be hanging around
 						//
 						if (messageBox) {
-							messageBox.close();
+							messageBox.detach();
 							messageBox = null;
 						}
 
-						//// Center in on the new one
+						//// Center in on the new scenario if possible
 						//
 						if (newScenario && _count[newScenario]) {
 							controller.setCentering(controller.CENTERING_NOT);
@@ -200,28 +202,45 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 								bounds.extend(source.pos());
 							});
 							map.fitBounds(bounds);
+						}
 
-							// HACK!
-							// TODO: Make it possible to encode such messages properly
-							// TODO: This isn't really in the right place either
-							//
-							if (!infoWindowsSeen[newScenario] && newScenario === "Dam Square Experience") {
-								infoWindowsSeen[newScenario] = true;
-								messageBox = new InfoBox({
-									content               : "<div class=\"content\"></div><button class=\"OK\">OK</button>",
-									enableEventPropagation: true,
-									position              : map.getCenter(),
-									pixelOffset           : new gmaps.Size(-240, -150)
-								});
+						// Show infobox.
+						// HACK!
+						// TODO: Make it possible to encode such messages properly
+						// TODO: This isn't really in the right place either
+						//
+						if (!infoWindowsSeen[newScenario]) {
+							messageBox = $("<div class=\"infoBox\"><div class=\"content\"></div><button class=\"OK\">OK</button></div>");
 
-								messageBox.open(map);
+							messageBox.ready(function () {
+								var messages = [];
 
-								gmaps.event.addDomListenerOnce(messageBox, 'domready', function () {
-
-									var messages = [
-										("<img style=\"display: block;\" src=\"img/Gezicht-op-de-Dam.jpg\">" +
+								if (!infoWindowsSeen[null]) {
+									messages = [
+										("<h2>Welcome to Talescape!</h2>" +
 										 "<p>" +
-										 "    The Dam Square Experience is made possible by the NWO project " +
+										 "    At the moment, the project is in an early stage of development." +
+										 "    It's not even at beta yet." +
+										 "    But do feel free to play around with it!" +
+										 "    Click or tap on the selection-box in the top left corner of your screen to choose a scenario." +
+										 "    You'll receive some instructions about the possible controls once you're there." +
+										 "</p>" +
+										 "<p>" +
+										 "    Please note that at this stage, there are sure to be bugs left to fix and features left to implement" +
+										 "    (granted, this is generally true at <em>any</em> stage of software development)." +
+										 "    Controls may not work as expected, you may not hear any sound or the website may crash altogether." +
+										 "</p>" +
+										 "<p style=\"font-weight: bold;\">" +
+										 "    Have fun! And always pay attention to traffic when crossing the street!" +
+										 "</p>")
+									];
+								}
+
+								if (newScenario === "Dam Square Experience") {
+									messages = messages.concat([
+										("<img class=\"photo\" src=\"img/Gezicht-op-de-Dam.jpg\">" +
+										 "<p>" +
+										 "    The <strong>Dam Square Experience</strong> is made possible by the NWO project " +
 										 "    <a href=\"http://www.maastrichtsts.nl/?project=soundscapes-of-the-urban-past-staged-sound-as-mediated-cultural-heritage\">Soundscapes of the Urban Past</a>, " +
 										 "    performed by the <a href=\"http://www.maastrichtsts.nl\">STS&nbsp;research&nbsp;group</a> of Maastricht University." +
 										 "</p>"),
@@ -267,29 +286,31 @@ define(['jquery', 'gmaps', 'angular', 'infobox', 'TS', 'ts-map', 'geo'], functio
 										 "    ⇔" +
 										 "    <img class=\"button-image\" src=\"img/centering-user.png\">" +
 										 "</div>")
-									];
+									]);
+								}
 
+								messageBox.appendTo($('body'));
+								var contentDiv = $('.infoBox > .content');
+								var okButton = $('.infoBox > .OK');
 
-									var contentDiv = $('.infoBox > .content');
-									var okButton = $('.infoBox > .OK');
+								var screen = 0;
 
-									var screen = 0;
-
-									function screenStep() {
-										if (screen < messages.length) {
-											contentDiv.html(messages[screen]);
-										} else {
-											okButton.off();
-											messageBox.close.call(messageBox);
-										}
-										++screen;
+								function screenStep() {
+									if (screen < messages.length) {
+										contentDiv.html(messages[screen]);
+									} else {
+										okButton.off();
+										messageBox.detach();
 									}
+									++screen;
+								}
 
-									screenStep();
+								screenStep();
 
-									okButton.click(screenStep);
-								});
-							}
+								okButton.click(screenStep);
+							});
+
+							infoWindowsSeen[newScenario] = true;
 						}
 					});
 				});

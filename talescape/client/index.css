@@ -79,34 +79,46 @@ html, body {
 .infoBox {
   background-color: white;
   border: solid 1px black;
-  width: 480px;
+  width: 370px;
   padding: 0;
-  text-align: justify; }
-  .infoBox > * {
-    display: none; }
+  padding-bottom: 30px;
+  text-align: justify;
+  z-index: 99999999;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  margin-left: -185px;
+  margin-top: -185px; }
   .infoBox > .content, .infoBox > .OK {
     display: block; }
   .infoBox > .content {
     margin: 0;
-    padding: 0;
-    border: none; }
-    .infoBox > .content img {
-      margin: 10px; }
+    padding: 10px;
+    border: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 350px; }
+    .infoBox > .content img.photo {
+      width: 100%;
+      height: auto; }
     .infoBox > .content img.button-image {
       border: solid 1px gray;
       padding: 4px;
       height: 16px;
       width: 16px;
-      vertical-align: -50%;
-      display: inline-block; }
+      vertical-align: middle; }
     .infoBox > .content img.centered {
       display: block !important;
       margin: 0 auto; }
+    .infoBox > .content h2 {
+      margin: 10px; }
     .infoBox > .content p {
-      margin: 20px; }
+      margin: 10px; }
       .infoBox > .content p, .infoBox > .content p a {
         font-size: 12pt; }
   .infoBox > .OK {
+    position: absolute;
+    top: 100%;
     width: 100%;
     border: none;
     border-top: solid black 1px;
@@ -114,6 +126,8 @@ html, body {
     text-align: center;
     margin: 0px;
     padding: 5px;
-    font-weight: bold; }
+    font-weight: bold;
+    height: 30px;
+    margin-top: -30px; }
     .infoBox > .OK:hover {
       background-color: #d2e6ff; }

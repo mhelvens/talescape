@@ -9,8 +9,7 @@ require.config({
 		'domReady'  : 'lib/requirejs-domready/domReady',
 		'async'     : 'lib/requirejs-plugins/src/async',
 		'jquery'    : 'lib/jquery/jquery',
-		'angular'   : 'lib/angular/angular',
-		'infobox'   : 'lib/google-maps-utility-library-v3/infobox/src/infobox'
+		'angular'   : 'lib/angular/angular'
 	},
 	shim : {
 		'polyfiller': ['jquery', 'modernizr'],
