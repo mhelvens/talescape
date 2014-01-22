@@ -5,21 +5,25 @@ define(['angular'], function (angular) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-	///////////////////////////////////
-	////// Main Talescape Module //////
-	//////                       //////
+    ///////////////////////////////////
+    ////// Main Talescape Module //////
+    //////                       //////
 
 
-	var TS = angular.module('TS', []);
+    var TS = angular.module('TS', []);
 
-	TS.config(function ($locationProvider) {
-		$locationProvider.html5Mode(true).hashPrefix('');
-	});
+    TS.config(function ($locationProvider) {
+        $locationProvider.html5Mode(true).hashPrefix('@');
+    }).run(function ($location) {
+            console.log("- URL path:  " + $location.path());
+            console.log("- URL query: " + angular.toJson($location.search()));
+            console.log("- URL hash:  " + $location.hash());
+    });
 
-	TS.controller('ApplicationController', ['$rootScope', function ($rootScope) {
-		$rootScope.title = "Talescape";
-		$rootScope.subtitle = "";
-	}]);
+    TS.controller('ApplicationController', ['$rootScope', function ($rootScope) {
+        $rootScope.title = "Talescape";
+        $rootScope.subtitle = "";
+    }]);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 });/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
